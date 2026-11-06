@@ -32,7 +32,7 @@ export interface InteractiveTarget {
 }
 
 export class WorldScene extends Phaser.Scene {
-  public mapW = 120;
+  public mapW = 196;
   public mapH = 90;
   public player!: Phaser.GameObjects.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -126,19 +126,32 @@ export class WorldScene extends Phaser.Scene {
     this.livingWorldManager.registerFireSource(48 * 16, 24 * 16, true, 28, 0xffa533); // Cranach Presse
     this.livingWorldManager.registerFireSource(26 * 16, 68 * 16, true, 32, 0xff7722); // Wartburg Kamin
     this.livingWorldManager.registerFireSource(72 * 16, 42 * 16, false, 20, 0xffaa44); // Tetzel Kanzel
+    this.livingWorldManager.registerFireSource(170 * 16, 41 * 16, true, 28, 0xff7722); // Kloster Sudherd
 
-    // Animated Fireplace in Wartburg Stube
+    // Animated Fireplaces
     if (this.textures.exists('hearth_fire')) {
-      this.add.sprite(104 * 16, 66 * 16, 'hearth_fire').play('hearth-fire').setDepth(66 * 16 + 1);
+      this.add.sprite(106 * 16, 66 * 16, 'hearth_fire').play('hearth-fire').setDepth(66 * 16 + 1); // Wartburg
+      this.add.sprite(170 * 16, 41 * 16, 'hearth_fire').play('hearth-fire').setDepth(41 * 16 + 1); // Kloster
     }
     // Sleeping Dog Tölpel in Wartburg Stube
     if (this.textures.exists('dog_sleeping')) {
-      this.add.sprite(106 * 16, 68 * 16, 'dog_sleeping').play('dog-sleeping-anim').setDepth(68 * 16 + 1);
+      this.add.sprite(108 * 16, 68 * 16, 'dog_sleeping').play('dog-sleeping-anim').setDepth(68 * 16 + 1);
     }
-    // Lit Candles on Desks
+    // Lit Candles on Desks & Tables
     if (this.textures.exists('candle_lit')) {
-      this.add.sprite(109 * 16 + 8, 68 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(68 * 16 + 2);
-      this.add.sprite(112 * 16 + 8, 18 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(18 * 16 + 2);
+      this.add.sprite(111 * 16 + 8, 68 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(68 * 16 + 2); // Wartburg
+      this.add.sprite(114 * 16 + 8, 18 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(18 * 16 + 2); // Cranach
+      this.add.sprite(143 * 16 + 8, 20 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(20 * 16 + 2); // Worms
+      this.add.sprite(148 * 16 - 8, 68 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(68 * 16 + 2); // Fugger
+      this.add.sprite(175 * 16 - 12, 45 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(45 * 16 + 2); // Kloster
+    }
+    // Animated Sparkling Gold Coins in Fuggerpalais
+    if (this.textures.exists('coin_sparkle')) {
+      this.add.sprite(148 * 16 + 8, 68 * 16 - 8, 'coin_sparkle').play('coin-sparkle-anim').setDepth(68 * 16 + 3);
+    }
+    // Animated Boiling Herbal Cauldron in Kloster
+    if (this.textures.exists('cauldron')) {
+      this.add.sprite(170 * 16 + 4, 41 * 16 - 4, 'cauldron').play('cauldron-anim').setDepth(41 * 16 + 2);
     }
 
     // 13. First Chapter Banner
@@ -239,13 +252,27 @@ export class WorldScene extends Phaser.Scene {
         const inAugsburgPlaza = tx >= 68 && tx <= 84 && ty >= 14 && ty <= 28;
         const inWartburgCourt = tx >= 20 && tx <= 32 && ty >= 68 && ty <= 82;
 
-        // Interiors (Sub-Maps)
-        const inCranachInterior = tx >= 102 && tx <= 116 && ty >= 14 && ty <= 26;
-        const inWartburgInterior = tx >= 102 && tx <= 116 && ty >= 64 && ty <= 76;
+        // Interiors (Sub-Maps mit 3-Spalten-Architektur und maximaler Void-Isolation)
+        const inCranachInterior = tx >= 104 && tx <= 118 && ty >= 14 && ty <= 26;
+        const inWartburgInterior = tx >= 104 && tx <= 118 && ty >= 64 && ty <= 76;
+        const inWormsInterior = tx >= 136 && tx <= 150 && ty >= 14 && ty <= 26;
+        const inFuggerInterior = tx >= 136 && tx <= 150 && ty >= 64 && ty <= 76;
+        const inKlosterInterior = tx >= 168 && tx <= 182 && ty >= 39 && ty <= 51;
+
         const isWall =
-          (inCranachInterior && (tx <= 103 || tx >= 115 || ty <= 15 || ty >= 25)) ||
-          (inWartburgInterior && (tx <= 103 || tx >= 115 || ty <= 65 || ty >= 75));
-        const inVoid = tx >= 96 && !inCranachInterior && !inWartburgInterior;
+          (inCranachInterior && (tx <= 105 || tx >= 117 || ty <= 15 || ty >= 25)) ||
+          (inWartburgInterior && (tx <= 105 || tx >= 117 || ty <= 65 || ty >= 75)) ||
+          (inWormsInterior && (tx <= 137 || tx >= 149 || ty <= 15 || ty >= 25)) ||
+          (inFuggerInterior && (tx <= 137 || tx >= 149 || ty <= 65 || ty >= 75)) ||
+          (inKlosterInterior && (tx <= 169 || tx >= 181 || ty <= 40 || ty >= 50));
+
+        const inVoid =
+          tx >= 96 &&
+          !inCranachInterior &&
+          !inWartburgInterior &&
+          !inWormsInterior &&
+          !inFuggerInterior &&
+          !inKlosterInterior;
 
         let bx = 1;
         let by = 1;
@@ -288,6 +315,30 @@ export class WorldScene extends Phaser.Scene {
               r = 54;
               g = 44;
               b = 36;
+            } else if (inWormsInterior) {
+              // Imperial Bürgersaal zu Worms: red carpet runner down center, polished stone around
+              if (tx >= 142 && tx <= 144 && ty >= 16 && ty <= 24) {
+                r = Math.min(255, Math.max(0, Math.round(140 + dither * 16)));
+                g = Math.min(255, Math.max(0, Math.round(36 + dither * 8)));
+                b = Math.min(255, Math.max(0, Math.round(44 + dither * 8)));
+              } else {
+                [r, g, b] = sampleBlock(1, 2, px, py);
+                r = Math.min(255, Math.round(r * 1.2));
+                g = Math.min(255, Math.round(g * 1.18));
+                b = Math.min(255, Math.round(b * 1.22));
+              }
+            } else if (inFuggerInterior) {
+              // Fuggerpalais Augsburg: warm Renaissance terracotta tiles
+              [r, g, b] = sampleBlock(1, 2, px, py);
+              r = Math.min(255, Math.round(r * 1.28));
+              g = Math.min(255, Math.round(g * 1.05));
+              b = Math.min(255, Math.round(b * 0.92));
+            } else if (inKlosterInterior) {
+              // Schwarzes Kloster Refektorium: monastic aged timber planks
+              [r, g, b] = sampleBlock(1, 0, px, py);
+              r = Math.min(255, Math.round(r * 1.08));
+              g = Math.min(255, Math.round(g * 0.98));
+              b = Math.min(255, Math.round(b * 0.88));
             } else if (inCranachInterior || inWartburgInterior) {
               [r, g, b] = sampleBlock(1, 0, px, py);
               r = Math.min(255, Math.round(r * 1.15));
@@ -451,7 +502,8 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    // 5. Begehbare Innenräume & Warp-Türen (Sub-Maps)
+    // 5. Begehbare Innenräume & Warp-Türen (Sub-Maps mit 3-Spalten-Architektur)
+    // Cranach-Hofwerkstatt (Spalte 1 oben)
     this.targets.push({
       id: 'door_enter_cranach',
       kind: 'door',
@@ -461,7 +513,7 @@ export class WorldScene extends Phaser.Scene {
       y: 16 * 16,
       minChapter: 1,
       actionTip: '[E] Werkstatt betreten',
-      warpTarget: { x: 108 * 16, y: 24 * 16, isIndoor: true, name: 'Cranachs Werkstatt & Druckerei' },
+      warpTarget: { x: 110 * 16, y: 24 * 16, isIndoor: true, name: 'Cranachs Werkstatt & Druckerei' },
     });
 
     this.targets.push({
@@ -469,13 +521,14 @@ export class WorldScene extends Phaser.Scene {
       kind: 'door',
       name: 'Hofportal Wittenberg',
       sub: 'Hinaus auf den Marktplatz',
-      x: 108 * 16,
+      x: 110 * 16,
       y: 25 * 16,
       minChapter: 1,
       actionTip: '[E] Hinaus auf den Hof',
       warpTarget: { x: 44 * 16, y: 17 * 16, isIndoor: false, name: 'Wittenberg Hof' },
     });
 
+    // Wartburg Schreibstube (Spalte 1 unten)
     this.targets.push({
       id: 'door_enter_wartburg',
       kind: 'door',
@@ -485,7 +538,7 @@ export class WorldScene extends Phaser.Scene {
       y: 74 * 16,
       minChapter: 1,
       actionTip: '[E] Schreibstube betreten',
-      warpTarget: { x: 108 * 16, y: 74 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' },
+      warpTarget: { x: 110 * 16, y: 74 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' },
     });
 
     this.targets.push({
@@ -493,11 +546,86 @@ export class WorldScene extends Phaser.Scene {
       kind: 'door',
       name: 'Ausgang zum Burghof',
       sub: 'Hinaus auf den Schlosshof',
-      x: 108 * 16,
+      x: 110 * 16,
       y: 75 * 16,
       minChapter: 1,
       actionTip: '[E] Hinaus auf den Burghof',
       warpTarget: { x: 20 * 16, y: 75 * 16, isIndoor: false, name: 'Wartburg Burghof' },
+    });
+
+    // 6. Kaiserlicher Reichstagssaal zu Worms (Spalte 2 oben, Kap. 4)
+    this.targets.push({
+      id: 'door_enter_worms',
+      kind: 'door',
+      name: 'Reichstags-Bürgersaal Portal',
+      sub: 'Eingang zum Kaiserlichen Verhörsaal',
+      x: 74 * 16,
+      y: 16 * 16,
+      minChapter: 1,
+      actionTip: '[E] Reichstag betreten',
+      warpTarget: { x: 143 * 16, y: 24 * 16, isIndoor: true, name: 'Kaiserlicher Reichstagssaal (Worms)' },
+    });
+
+    this.targets.push({
+      id: 'door_exit_worms',
+      kind: 'door',
+      name: 'Ausgang zum Vorplatz',
+      sub: 'Hinaus auf den Vorplatz zu Worms',
+      x: 143 * 16,
+      y: 25 * 16,
+      minChapter: 1,
+      actionTip: '[E] Saal verlassen',
+      warpTarget: { x: 74 * 16, y: 17 * 16, isIndoor: false, name: 'Reichstag Vorplatz (Worms)' },
+    });
+
+    // 7. Fuggerpalais Audienzsaal Augsburg (Spalte 2 unten, Kap. 3)
+    this.targets.push({
+      id: 'door_enter_fugger',
+      kind: 'door',
+      name: 'Fuggerpalais Portal',
+      sub: 'Eingang zum päpstlichen Audienzsaal',
+      x: 62 * 16,
+      y: 13 * 16,
+      minChapter: 1,
+      actionTip: '[E] Fuggerpalais betreten',
+      warpTarget: { x: 143 * 16, y: 74 * 16, isIndoor: true, name: 'Fuggerpalais Audienzsaal (Augsburg)' },
+    });
+
+    this.targets.push({
+      id: 'door_exit_fugger',
+      kind: 'door',
+      name: 'Ausgang zum Hof',
+      sub: 'Hinaus auf den Augsburger Hof',
+      x: 143 * 16,
+      y: 75 * 16,
+      minChapter: 1,
+      actionTip: '[E] Palais verlassen',
+      warpTarget: { x: 62 * 16, y: 14 * 16, isIndoor: false, name: 'Fuggerpalais Hof (Augsburg)' },
+    });
+
+    // 8. Schwarzes Kloster Refektorium & Hausapotheke (Spalte 3 Mitte, Kap. 6)
+    this.targets.push({
+      id: 'door_enter_kloster',
+      kind: 'door',
+      name: 'Lutherhaus Klosterpforte',
+      sub: 'Pforte zu Refektorium & Hausapotheke',
+      x: 38 * 16,
+      y: 50 * 16,
+      minChapter: 1,
+      actionTip: '[E] Kloster betreten',
+      warpTarget: { x: 175 * 16, y: 49 * 16, isIndoor: true, name: 'Refektorium & Kloster-Apotheke' },
+    });
+
+    this.targets.push({
+      id: 'door_exit_kloster',
+      kind: 'door',
+      name: 'Ausgang zum Garten',
+      sub: 'Hinaus in den Kloster-Kräutergarten',
+      x: 175 * 16,
+      y: 50 * 16,
+      minChapter: 1,
+      actionTip: '[E] Kloster verlassen',
+      warpTarget: { x: 38 * 16, y: 52 * 16, isIndoor: false, name: 'Lutherhaus Klostergarten' },
     });
   }
 
@@ -670,14 +798,28 @@ export class WorldScene extends Phaser.Scene {
       gameState.playerY = target.y;
 
       if (target.isIndoor) {
-        if (target.y < 50 * 16) {
-          // Cranach Werkstatt
-          cam.setBounds(101 * 16, 13 * 16, 16 * 16, 14 * 16);
+        cam.setZoom(2.8);
+        let rcx = target.x;
+        let rcy = target.y - 48;
+        if (target.x < 125 * 16) {
+          // Spalte 1: Cranach (oben) oder Wartburg (unten)
+          rcx = 111 * 16;
+          rcy = target.y < 50 * 16 ? 20 * 16 : 70 * 16;
+        } else if (target.x < 160 * 16) {
+          // Spalte 2: Worms (oben) oder Fuggerpalais (unten)
+          rcx = 143 * 16;
+          rcy = target.y < 50 * 16 ? 20 * 16 : 70 * 16;
         } else {
-          // Wartburg Stube
-          cam.setBounds(101 * 16, 63 * 16, 16 * 16, 14 * 16);
+          // Spalte 3: Schwarzes Kloster Refektorium & Apotheke
+          rcx = 175 * 16;
+          rcy = 45 * 16;
         }
+
+        const viewW = cam.width / cam.zoom;
+        const viewH = cam.height / cam.zoom;
+        cam.setBounds(rcx - viewW / 2, rcy - viewH / 2, viewW, viewH);
       } else {
+        cam.setZoom(2.2);
         cam.setBounds(0, 0, 96 * 16, this.mapH * 16);
       }
 

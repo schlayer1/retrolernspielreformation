@@ -182,7 +182,7 @@ async function main() {
     console.log('11. Capturing Interior Warp (Wartburg-Stube)...');
     await page.evaluate(() => {
       const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 108 * 16, y: 72 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' });
+      ws.warpTo({ x: 110 * 16, y: 72 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' });
     });
     await sleep(700);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_11_interior_wartburg.png') });
@@ -198,7 +198,41 @@ async function main() {
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_12_gutenberg_workshop.png') });
     console.log('✅ verify_12_gutenberg_workshop.png captured');
 
-    console.log('\n🎉 ALL 12 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
+    // Close Workshop Modal
+    await page.click('#btn-station-close');
+    await sleep(400);
+
+    // 13. Interior Warp: Kaiserlicher Reichstagssaal zu Worms (1521, Kap. 4)
+    console.log('13. Capturing Interior Warp (Worms Reichstagssaal)...');
+    await page.evaluate(() => {
+      const ws = (window.__GAME__.scene.getScene('WorldScene'));
+      ws.warpTo({ x: 143 * 16, y: 22 * 16, isIndoor: true, name: 'Kaiserlicher Reichstagssaal (Worms)' });
+    });
+    await sleep(700);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_13_interior_worms.png') });
+    console.log('✅ verify_13_interior_worms.png captured');
+
+    // 14. Interior Warp: Fuggerpalais Audienzsaal Augsburg (1518, Kap. 3)
+    console.log('14. Capturing Interior Warp (Fuggerpalais Audienzsaal)...');
+    await page.evaluate(() => {
+      const ws = (window.__GAME__.scene.getScene('WorldScene'));
+      ws.warpTo({ x: 143 * 16, y: 72 * 16, isIndoor: true, name: 'Fuggerpalais Audienzsaal (Augsburg)' });
+    });
+    await sleep(700);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_14_interior_fugger.png') });
+    console.log('✅ verify_14_interior_fugger.png captured');
+
+    // 15. Interior Warp: Schwarzes Kloster Refektorium & Apotheke (1525, Kap. 6)
+    console.log('15. Capturing Interior Warp (Schwarzes Kloster Refektorium & Apotheke)...');
+    await page.evaluate(() => {
+      const ws = (window.__GAME__.scene.getScene('WorldScene'));
+      ws.warpTo({ x: 175 * 16, y: 47 * 16, isIndoor: true, name: 'Refektorium & Kloster-Apotheke' });
+    });
+    await sleep(700);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_15_interior_kloster.png') });
+    console.log('✅ verify_15_interior_kloster.png captured');
+
+    console.log('\n🎉 ALL 15 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
   } catch (err) {
     console.error('Browser verification failed:', err);
     process.exit(1);

@@ -85,6 +85,10 @@ export class BootScene extends Phaser.Scene {
       'book_pile',
       'book_open',
       'armchair_green',
+      'armor_stand',
+      'banner_wall',
+      'banner_stand',
+      'window_curtains',
     ];
     for (const p of props) {
       this.load.image(p, `/assets/props/${p}.png`);
@@ -102,6 +106,14 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('candle_lit', '/assets/animations/candle_lit_strip.png', {
       frameWidth: 8,
       frameHeight: 11,
+    });
+    this.load.spritesheet('coin_sparkle', '/assets/animations/coin_sparkle_strip.png', {
+      frameWidth: 22,
+      frameHeight: 22,
+    });
+    this.load.spritesheet('cauldron', '/assets/animations/cauldron_strip.png', {
+      frameWidth: 24,
+      frameHeight: 26,
     });
 
     // 8. Relic icons
@@ -178,6 +190,22 @@ export class BootScene extends Phaser.Scene {
         key: 'candle-lit-anim',
         frames: this.anims.generateFrameNumbers('candle_lit', { start: 0, end: 3 }),
         frameRate: 6,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('coin_sparkle') && !this.anims.exists('coin-sparkle-anim')) {
+      this.anims.create({
+        key: 'coin-sparkle-anim',
+        frames: this.anims.generateFrameNumbers('coin_sparkle', { start: 0, end: 7 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('cauldron') && !this.anims.exists('cauldron-anim')) {
+      this.anims.create({
+        key: 'cauldron-anim',
+        frames: this.anims.generateFrameNumbers('cauldron', { start: 0, end: 11 }),
+        frameRate: 9,
         repeat: -1,
       });
     }

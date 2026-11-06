@@ -933,6 +933,7 @@ export class UIScene extends Phaser.Scene {
 
   public showToast(msg: string): void {
     if (!this.toastContainer) return;
+    this.toastContainer.innerHTML = '';
     const toast = document.createElement('div');
     toast.className = 'retro-toast';
     toast.textContent = msg;
