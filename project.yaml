@@ -1,0 +1,42 @@
+name: snes-retro-game-reformation
+title: "Die Reformation: Glaube, Macht & die Medienrevolution (1517–1555)"
+version: 1.0.0
+phase: 1_concept
+framework: claude-code-game-studio
+standard: snes-history-game
+target_audience: "Schule / Geschichte Sekundarstufe I (Klasse 7/8)"
+
+roles:
+  creative_director: "Antigravity CCGS"
+  game_designer: "Antigravity CCGS"
+  narrative_director: "Antigravity CCGS"
+  lead_programmer: "Antigravity CCGS"
+  user_role: "Executive Producer & Lead Historian"
+
+gameplay:
+  genre: "16-Bit Top-Down Geschichts-Abenteuer"
+  engine: "Phaser 3.80+ & Retina HTML5 DOM Dual-Layer"
+  perspective: "Top-Down RPG (SNES 16-Bit Style)"
+  chapters_total: 8
+  conflict_model: "Friedens- und handlungspädagogisch (Quellenanalyse, Diplomatie, Buchdruck, Worträtsel)"
+  protagonist:
+    name: "Lucas"
+    role: "Junger Gehilfe in der Werkstatt von Lucas Cranach d. Ä. & Chronist"
+    description: "Begleitet die Reformation von den Anfängen in Wittenberg, über den Buchdruck, Worms und die Wartburg bis zum Augsburger Religionsfrieden."
+
+tech_stack:
+  engine: "Phaser 3.80.1"
+  frontend: "Vite, TypeScript, HTML5/CSS3 Retina DOM"
+  resolution: "640x360 Basis (2x Zoom für 16-Bit Retro), voll fluid-skalierend"
+  audio: "Dual-Audio (Atmosphärische WebAudio Chiptune/Laute/Choral Synthese + AudioFX)"
+  qa_tooling: "Puppeteer-Core für automatisierte Screenshots & Layout-Overlap Checks"
+
+asset_pipeline:
+  primary_source: "/Users/nicolekeller/Desktop/Antigravity Projekte/Epochenhub Retro Games/assets_library"
+  helper_tool: "Retro Asset Studio (Electron Inspector & Asset Cache)"
+  selected_packs:
+    - "Medieval Monastery (Klöster Erfurt & Wittenberg, Wartburg-Kammer)"
+    - "Medieval Fantasy Town / Buildings (Wittenberg, Augsburg, Worms)"
+    - "Medieval Furniture & Arcane Library (Cranach-Druckerei, Schreibstuben)"
+    - "Medieval Farm / Village (Bauernkrieg 1525, Umland)"
+    - "Medieval Royal Palace / Fortress (Wartburg, Kaiserpfalz Worms)"

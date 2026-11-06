@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Die Reformation: Glaube, Macht & die Medienrevolution (1517–1555) | 16-Bit Geschichtslernspiel</title>
+    <link rel="icon" type="image/png" href="/assets/icons/relic_codex.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --parch-bg: #fdf6e3;
+        --parch-card: #f7ecd2;
+        --parch-border: #b45309;
+        --wood-dark: #1a120c;
+        --gold-glow: #d97706;
+        --gold-bright: #fbbf24;
+        --text-light: #fef3c7;
+        --text-dark: #291b12;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #100c08;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--text-light);
+      }
+
+      #game-container {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+      }
+
+      #game-container canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      #ui-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        pointer-events: none;
+      }
+
+      /* Single Proximity Label */
+      .world-dom-label {
+        position: absolute;
+        transform: translate(-50%, -100%);
+        background: rgba(26, 18, 12, 0.94);
+        border: 1.5px solid var(--gold-glow);
+        border-radius: 6px;
+        padding: 5px 12px;
+        text-align: center;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+        white-space: nowrap;
+        pointer-events: auto;
+        cursor: pointer;
+        z-index: 10;
+        font-size: 12px;
+        color: #fef08a;
+      }
+
+      /* HUD Top Bar */
+      .hud-top-bar {
+        position: absolute;
+        top: 10px;
+        left: 12px;
+        right: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: auto;
+        gap: 8px;
+        z-index: 20;
+      }
+
+      .hud-left {
+        background: rgba(26, 18, 12, 0.92);
+        border: 1.5px solid var(--gold-glow);
+        border-radius: 8px;
+        padding: 6px 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      }
+
+      .hud-ch-badge {
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--gold-bright);
+        font-family: 'Cinzel', serif;
+      }
+
+      .hud-player-badge,
+      .hud-pts-badge {
+        font-size: 11.5px;
+        color: #e5e7eb;
+      }
+
+      .hud-right {
+        display: flex;
+        gap: 8px;
+      }
+
+      .hud-btn {
+        background: rgba(26, 18, 12, 0.9);
+        border: 1px solid var(--gold-glow);
+        color: #fef3c7;
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .hud-btn:hover {
+        background: #b45309;
+        color: #fff;
+      }
+
+      /* Quest Tracker Box */
+      .quest-tracker-box {
+        position: absolute;
+        top: 56px;
+        right: 12px;
+        width: 280px;
+        background: rgba(26, 18, 12, 0.92);
+        border: 1.5px solid var(--gold-glow);
+        border-radius: 8px;
+        padding: 12px 14px;
+        pointer-events: auto;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+        z-index: 15;
+      }
+
+      .quest-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        border-bottom: 1px solid rgba(217, 119, 6, 0.4);
+        padding-bottom: 4px;
+        margin-bottom: 8px;
+      }
+
+      .quest-title {
+        font-family: 'Cinzel', serif;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--gold-bright);
+      }
+
+      .quest-year {
+        font-size: 10.5px;
+        color: #94a3b8;
+      }
+
+      .quest-primary {
+        font-size: 11.5px;
+        line-height: 1.4;
+        color: #f3f4f6;
+        margin-bottom: 8px;
+      }
+
+      .quest-checklist {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .quest-item {
+        font-size: 10.5px;
+        color: #cbd5e1;
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .quest-item.completed {
+        color: #86efac;
+        text-decoration: line-through;
+      }
+
+      .check-box {
+        font-weight: 800;
+        color: var(--gold-bright);
+      }
+
+      .quest-footer {
+        margin-top: 8px;
+        padding-top: 4px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.15);
+        font-size: 10px;
+        color: #9ca3af;
+      }
+
+      /* Modal Overlay & Base */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(16, 12, 8, 0.85);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        pointer-events: auto;
+      }
+
+      .start-screen-card {
+        background: var(--parch-bg);
+        border: 3px double var(--parch-border);
+        border-radius: 12px;
+        max-width: 680px;
+        width: 100%;
+        color: var(--text-dark);
+        padding: 24px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
+      }
+
+      .start-header {
+        text-align: center;
+        margin-bottom: 14px;
+      }
+
+      .sub-lead {
+        font-size: 11px;
+        font-weight: 700;
+        color: #b45309;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .main-title {
+        font-family: 'Cinzel', serif;
+        font-size: 28px;
+        font-weight: 800;
+        color: #78350f;
+        margin: 4px 0;
+      }
+
+      .sub-title {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #4b5563;
+      }
+
+      .start-intro-text {
+        font-size: 12.5px;
+        line-height: 1.5;
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 10px 14px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .start-form-section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .start-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1.5px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+        background: #fff;
+        margin-top: 4px;
+      }
+
+      .role-selection-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 6px;
+      }
+
+      .role-card {
+        background: #fff;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .role-card:hover {
+        border-color: #b45309;
+      }
+
+      .role-card.selected {
+        border-color: #b45309;
+        background: #fffbf0;
+        box-shadow: 0 0 10px rgba(180, 83, 9, 0.2);
+      }
+
+      .role-card strong {
+        font-size: 12px;
+        color: #78350f;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .role-desc {
+        font-size: 10px;
+        color: #4b5563;
+        line-height: 1.35;
+        margin-bottom: 6px;
+      }
+
+      .role-bonus {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: #b45309;
+        background: #fef3c7;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      .btn-primary-large {
+        width: 100%;
+        background: #b45309;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        margin-top: 18px;
+        box-shadow: 0 4px 12px rgba(180, 83, 9, 0.4);
+      }
+
+      .btn-primary-large:hover {
+        background: #92400e;
+      }
+
+      /* Dialog Box */
+      .dialog-box-card {
+        background: var(--parch-bg);
+        border: 2px solid var(--parch-border);
+        border-radius: 10px;
+        max-width: 580px;
+        width: 100%;
+        color: var(--text-dark);
+        padding: 20px;
+      }
+
+      .dialog-speaker-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1.5px solid #e5e7eb;
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+      }
+
+      .portrait-box {
+        width: 48px;
+        height: 48px;
+        background: #fef3c7;
+        border: 1.5px solid #b45309;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .portrait-img {
+        width: 36px;
+        height: 36px;
+        object-fit: contain;
+      }
+
+      .speaker-name {
+        font-family: 'Cinzel', serif;
+        font-size: 16px;
+        font-weight: 800;
+        color: #78350f;
+        margin: 0;
+      }
+
+      .speaker-role {
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      .dialog-speech-text {
+        font-size: 13.5px;
+        line-height: 1.55;
+        color: #1f2937;
+        margin-bottom: 16px;
+      }
+
+      /* Relic Modal */
+      .relic-modal-card,
+      .inventory-card,
+      .lexicon-card,
+      .pause-card {
+        background: var(--parch-bg);
+        border: 2px solid var(--parch-border);
+        border-radius: 12px;
+        max-width: 660px;
+        width: 100%;
+        color: var(--text-dark);
+        padding: 20px;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1.5px solid #e5e7eb;
+        padding-bottom: 8px;
+        margin-bottom: 14px;
+      }
+
+      .modal-header h2 {
+        font-family: 'Cinzel', serif;
+        font-size: 16px;
+        color: #78350f;
+        margin: 0;
+      }
+
+      .btn-close {
+        background: none;
+        border: none;
+        font-size: 18px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #6b7280;
+      }
+
+      .relic-large-icon {
+        width: 48px;
+        height: 48px;
+        margin: 8px 0;
+      }
+
+      .relic-icon-center {
+        text-align: center;
+      }
+
+      .quiz-box {
+        margin-top: 14px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+      }
+
+      .quiz-options {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .quiz-opt-btn {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 8px 12px;
+        text-align: left;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.1s ease;
+      }
+
+      .quiz-opt-btn:hover {
+        background: #fef3c7;
+        border-color: #b45309;
+      }
+
+      .quiz-feedback {
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+
+      .quiz-feedback.correct {
+        background: #dcfce7;
+        color: #15803d;
+      }
+
+      .quiz-feedback.wrong {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      /* Inventory & Crafting */
+      .inv-split-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .inv-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        max-height: 260px;
+        overflow-y: auto;
+      }
+
+      .inv-item-slot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 6px 10px;
+      }
+
+      .slot-icon {
+        width: 28px;
+        height: 28px;
+      }
+
+      .recipe-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+      }
+
+      .btn-craft {
+        background: #b45309;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 6px;
+      }
+
+      /* Lexicon */
+      .lexicon-split {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 16px;
+        height: 320px;
+      }
+
+      .lex-list-col {
+        border-right: 1.5px solid #e5e7eb;
+        padding-right: 10px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .lex-list-item {
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11.5px;
+      }
+
+      .lex-list-item.active {
+        background: #fef3c7;
+        color: #78350f;
+        font-weight: 700;
+      }
+
+      .lex-detail-col {
+        overflow-y: auto;
+        padding-left: 6px;
+      }
+
+      /* Pause 7 Grid */
+      .pause-grid-7 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .pause-tile {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .tile-icon {
+        font-size: 22px;
+      }
+
+      /* Toast Notification */
+      .toast-container {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 150;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+      }
+
+      .retro-toast {
+        background: rgba(26, 18, 12, 0.95);
+        border: 1.5px solid var(--gold-glow);
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #fef08a;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+        transition: opacity 0.4s ease;
+      }
+
+      /* Utilities */
+      .btn-primary {
+        background: #b45309;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 12.5px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .btn-sub {
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      @media (max-width: 640px) {
+        .quest-tracker-box {
+          display: none;
+        }
+        .role-selection-grid {
+          grid-template-columns: 1fr;
+        }
+        .pause-grid-7 {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container"></div>
+    <div id="ui-layer"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
