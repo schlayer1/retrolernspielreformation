@@ -3,8 +3,8 @@
 **Projekt:** Die Reformation: Glaube, Macht & die Medienrevolution  
 **Framework:** Claude Code Game Studio (Donchitos CCGS)  
 **Standard:** `snes-history-game` (16-Bit Phaser 3 + Retina DOM)  
-**Aktuelle Phase:** Phase 1 — Concept & Systems Design  
-**Letztes Update:** 2026-11-06  
+**Aktuelle Phase:** Phase 7 — Release & Epochenhub-Integration (Vollständig abgeschlossen)  
+**Letztes Update:** 2026-11-07  
 
 ---
 
@@ -15,10 +15,10 @@
 | **Phase 1** | **Concept (`/start`, `/brainstorm`)** | 🟢 **DONE** | High-Concept Brief, Protagonist Lucas, 8 Kapitel abgestimmt |
 | **Phase 2** | **Systems Design (`/design-system`)** | 🟢 **DONE** | GDDs, 5 Relikte, 5 Stationen, 24 Lexikon-Begriffe, Rezepte |
 | **Phase 3** | **Technical Setup (`/setup-engine`)** | 🟢 **DONE** | Vite + Phaser 3 + TS Boilerplate, Layout-Checker 0 Overlaps, Build Passed |
-| **Phase 4** | **Pre-Production (`/prototype`)** | 🟡 **IN VERIFICATION** | Headless Browser Verifikation, 8 Screenshots |
-| **Phase 5** | **Production (`/dev-story`)** | ⚪ BEREIT | Vollständige Kapitel- und Questlogik aktiv |
-| **Phase 6** | **Polish & QA (`/qa-plan`, Puppeteer)**| ⚪ BEREIT | Evidenzprüfung & QA-Audit |
-| **Phase 7** | **Release & Epochenhub-Integration** | ⚪ GEPLANT | Git-Push, Build, Verknüpfung im Epochenhub |
+| **Phase 4** | **Pre-Production (`/prototype`)** | 🟢 **DONE** | Headless Browser Verifikation, 10 Screenshots |
+| **Phase 5** | **Production (`/dev-story`)** | 🟢 **DONE** | Vollständige Kapitel-, Quest- und interaktive Stationslogik |
+| **Phase 6** | **Polish & QA (`/qa-plan`, Puppeteer)**| 🟢 **DONE** | Evidenzprüfung & QA-Audit (10 Pflicht-Screenshots) |
+| **Phase 7** | **Release & Epochenhub-Integration** | 🟢 **DONE** | Git-Push auf `main`, Einhängung in `games.config.ts`, Cover/Avatar-Sync |
 
 ---
 
@@ -27,10 +27,11 @@
 1. **Protagonist:** **Lucas**, junger Gehilfe und Geselle in der Wittenberger Werkstatt von Lucas Cranach d. Ä. Dient als flexibler Chronist, Botenreiter für Kurfürst Friedrich und Vertrauter Luthers.
 2. **Epochenumfang:** 8 historische Großkapitel (1517 bis 1555) – vom Thesenanschlag über Worms und Wartburg bis zum Augsburger Religionsfrieden.
 3. **Asset-Versorgung:** Direkte Anbindung an die lokale `assets_library` aus `Epochenhub Retro Games` sowie Interaktion mit dem laufenden `Retro Asset Studio` (kein MCP erforderlich, direkter Dateizugriff und Cache-Querying).
+4. **Epochenhub-Integration:** Erstes Flaggschiff-Spiel der Epochenkategorie **Neuzeit & Moderne** im Epochenhub Kahla.
 
 ---
 
-## 📋 Nächste Schritte
-1. Abnahme des High-Concept GDD (`design/gdd/gdd_reformation_high_concept.md`)
-2. Abnahme der Mechanik-Spezifikation (`design/gdd/gdd_mechanics_and_stations.md`)
-3. Übergang zu Phase 2 & 3: Anlegen der Codebasis (`package.json`, Vite, Phaser 3)
+## 📋 Verifizierte Repositorien & Deployment-Zustand
+- **Game Repository:** [`schlayer1/retrolernspielreformation`](https://github.com/schlayer1/retrolernspielreformation.git) (Branch `main`, Build: ✅ Pass)
+- **Epochenhub Repository:** [`schlayer1/epochenhub`](https://github.com/schlayer1/epochenhub.git) (Branch `main`, Build: ✅ Pass)
+- **QA-Screenshots:** 10/10 Pflicht-Screenshots in `production/qa/evidence/` und Artifact-Ordner.
