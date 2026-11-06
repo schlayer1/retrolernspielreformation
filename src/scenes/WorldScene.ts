@@ -4,6 +4,7 @@ import { REFORMATION_CHAPTERS, ChapterData } from '../data/chapters';
 import { REFORMATION_ITEMS, ReformationItemId } from '../data/items';
 import { REFORMATION_RELICS, ReformationRelic } from '../data/relics';
 import { REFORMATION_DECOR, RESOURCE_NODES, DecorObject, ResourceNode } from '../data/decor';
+import { REFORMATION_STATIONS, DidacticStation } from '../data/stations';
 import { gameState } from '../systems/GameState';
 import { WildlifeManager } from '../world/Wildlife';
 import { LivingWorldManager } from '../world/LivingWorldManager';
@@ -384,6 +385,36 @@ export class WorldScene extends Phaser.Scene {
         actionTip: '[E] Sammeln',
       });
     }
+
+    // 4. Didaktische Mitmach-Stationen
+    for (const st of REFORMATION_STATIONS) {
+      const glow = this.add.image(st.x, st.y, 'relic_marker_glow')
+        .setOrigin(0.5, 0.5)
+        .setDepth(st.y)
+        .setScale(0.85)
+        .setTint(0xf59e0b);
+
+      this.tweens.add({
+        targets: glow,
+        alpha: { from: 0.45, to: 0.95 },
+        scale: { from: 0.8, to: 0.95 },
+        duration: 1100,
+        yoyo: true,
+        repeat: -1,
+      });
+
+      this.targets.push({
+        id: `station_${st.id}`,
+        kind: 'station',
+        name: st.name,
+        sub: `Didaktische Station · ${st.badge}`,
+        x: st.x,
+        y: st.y,
+        minChapter: st.chapter,
+        stationId: st.id,
+        actionTip: '[E] Station betreten',
+      });
+    }
   }
 
   private initInteractionLabel(): void {
@@ -531,6 +562,8 @@ export class WorldScene extends Phaser.Scene {
       }
     } else if (t.kind === 'relic' && t.relic) {
       uiScene.openRelicModal(t.relic);
+    } else if (t.kind === 'station' && t.stationId) {
+      uiScene.openStationModal(t.stationId);
     } else if (t.kind === 'resource' && t.nodeDef) {
       gameState.addItem(t.nodeDef.lootItem as ReformationItemId, t.nodeDef.lootCount);
       uiScene.showToast(`+${t.nodeDef.lootCount} ${t.nodeDef.name} gesammelt!`);

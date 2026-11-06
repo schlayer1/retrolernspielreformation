@@ -17,6 +17,8 @@ export interface DidacticStation {
   badge: string;
   intro: string;
   historicalPillar: string;
+  x: number;
+  y: number;
   steps: StationStep[];
 }
 
@@ -29,6 +31,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Finanzkritik',
     intro: 'Johann Tetzel preist mit markigen Worten den päpstlichen Ablass an. Untersuche den Eichenkasten und entlarve die Verflechtung von Seelenangst und Finanzen.',
     historicalPillar: 'Ablasskritik & Historische Urteilskompetenz',
+    x: 70 * 16,
+    y: 46 * 16,
     steps: [
       {
         id: 'step_1',
@@ -84,6 +88,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Medienrevolution',
     intro: 'Luthers lateinische Streitschrift muss für das einfache Volk gedruckt werden. Setze die Bleilettern im Winkelhaken und bediene die Druckerpresse!',
     historicalPillar: 'Gutenberg-Technologie & Medienrevolution',
+    x: 44 * 16,
+    y: 28 * 16,
     steps: [
       {
         id: 'step_1',
@@ -139,6 +145,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Theologiedialog',
     intro: 'Kardinal Cajetan verlangt das eine Wort: „Revoco“ (Ich widerrufe). Ordne die Argumente, um Luthers theologische Position zu verteidigen.',
     historicalPillar: 'Sola Scriptura & Gewissensfreiheit',
+    x: 56 * 16,
+    y: 22 * 16,
     steps: [
       {
         id: 'step_1',
@@ -172,6 +180,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Sprachschöpfung',
     intro: 'Als „Junker Jörg“ übersetzt Luther das griechische Neue Testament. Wähle die kraftvollen deutschen Worte, die bis heute unser Sprechen prägen!',
     historicalPillar: 'Entstehung der deutschen Schriftsprache',
+    x: 22 * 16,
+    y: 64 * 16,
     steps: [
       {
         id: 'step_1',
@@ -227,6 +237,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Quellenforschung',
     intro: 'Untersuche die historischen Originaldokumente von 1517 bis 1555 mit der Lupe und löse die abschließenden Historiker-Fragen.',
     historicalPillar: 'Quellenkritik & Historische Rekonstruktion',
+    x: 72 * 16,
+    y: 76 * 16,
     steps: [
       {
         id: 'step_1',

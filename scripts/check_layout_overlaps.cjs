@@ -107,7 +107,20 @@ if (fs.existsSync(path.join(ROOT, 'src/data/chapters.ts'))) {
   }
 }
 
-// 5. Check Overlaps
+// 5. Parse Didactic Stations from stations.ts
+if (fs.existsSync(path.join(ROOT, 'src/data/stations.ts'))) {
+  const stationsCode = fs.readFileSync(path.join(ROOT, 'src/data/stations.ts'), 'utf8');
+  const stationRegex = /id:\s*'([^']+)'[\s\S]*?x:\s*(\d+)\s*\*\s*16\s*,\s*y:\s*(\d+)\s*\*\s*16/g;
+  let m;
+  while ((m = stationRegex.exec(stationsCode)) !== null) {
+    const id = m[1];
+    const tx = parseFloat(m[2]);
+    const ty = parseFloat(m[3]);
+    addBox(`station:${id}(${tx},${ty})`, tx * 16, ty * 16, 32, 32, 0.85, 0.5, 0.5);
+  }
+}
+
+// 6. Check Overlaps
 let overlaps = 0;
 for (let i = 0; i < items.length; i++) {
   for (let j = i + 1; j < items.length; j++) {

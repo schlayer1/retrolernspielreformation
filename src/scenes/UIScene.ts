@@ -341,6 +341,118 @@ export class UIScene extends Phaser.Scene {
     document.getElementById('btn-relic-close')?.addEventListener('click', () => this.closeModal());
   }
 
+  public openStationModal(stationId: string): void {
+    const station = REFORMATION_STATIONS.find((s) => s.id === stationId);
+    if (!station) return;
+
+    this.activeModal = 'station';
+    this.modalOverlay.style.display = 'flex';
+
+    let currentStepIdx = 0;
+    let stepCompleted = false;
+
+    const render = () => {
+      const step = station.steps[currentStepIdx];
+      const isLastStep = currentStepIdx === station.steps.length - 1;
+
+      this.modalOverlay.innerHTML = `
+        <div class="station-card">
+          <div class="modal-header">
+            <div>
+              <span class="relic-epoch">${station.location} • ${station.badge}</span>
+              <h2>⚙️ ${station.name}</h2>
+            </div>
+            <button id="btn-station-close" class="btn-close">✕</button>
+          </div>
+
+          <div style="font-size:12px; color:#4b5563; margin-bottom:12px; line-height:1.4;">
+            ${station.intro}
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:11px; font-weight:700; color:#92400e; background:#fef3c7; padding:4px 10px; border-radius:6px; border:1px solid #fde68a;">
+            <span>${step.title}</span>
+            <span>Schritt ${currentStepIdx + 1} von ${station.steps.length}</span>
+          </div>
+
+          <div class="quiz-box" style="margin-top:0;">
+            <div class="quiz-question" style="font-weight:600; color:#1f2937; margin-bottom:8px;">${step.prompt}</div>
+            <div class="quiz-options">
+              ${step.options
+                .map(
+                  (opt, idx) => `
+                <button class="quiz-opt-btn station-opt-btn" data-index="${idx}">${opt.text}</button>
+              `
+                )
+                .join('')}
+            </div>
+            <div id="station-feedback" class="quiz-feedback" style="display:none;"></div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+            <span style="font-size:11px; color:#6b7280;">Epochensäule: ${station.historicalPillar}</span>
+            <div style="display:flex; gap:8px;">
+              <button id="btn-station-next" class="btn-primary" style="display:${stepCompleted ? 'inline-block' : 'none'};">
+                ${isLastStep ? 'Station abschließen ✓' : 'Nächster Schritt →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
+
+      const btns = this.modalOverlay.querySelectorAll('.station-opt-btn');
+      const fb = document.getElementById('station-feedback');
+      const nextBtn = document.getElementById('btn-station-next') as HTMLButtonElement | null;
+
+      btns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-index') || '0', 10);
+          const selectedOpt = step.options[idx];
+
+          if (selectedOpt.isCorrect) {
+            btns.forEach((b) => ((b as HTMLButtonElement).disabled = true));
+            btn.classList.add('correct');
+            if (fb) {
+              fb.style.display = 'block';
+              fb.className = 'quiz-feedback correct';
+              fb.innerHTML = `✓ Ausgezeichnet! ${selectedOpt.feedback}`;
+            }
+            sound.success();
+            stepCompleted = true;
+            if (nextBtn) nextBtn.style.display = 'inline-block';
+          } else {
+            if (fb) {
+              fb.style.display = 'block';
+              fb.className = 'quiz-feedback wrong';
+              fb.innerHTML = `✕ Noch nicht ganz: ${selectedOpt.feedback}`;
+            }
+            sound.click();
+          }
+        });
+      });
+
+      nextBtn?.addEventListener('click', () => {
+        sound.click();
+        if (isLastStep) {
+          gameState.completeObjective(station.chapter, 2);
+          gameState.knowledge += 15;
+          gameState.courage += 5;
+          this.closeModal();
+          this.showToast(`🏆 Station '${station.name}' gemeistert! (+15 Bildung, +5 Mut)`);
+          this.renderHUD();
+          sound.questStep();
+        } else {
+          currentStepIdx++;
+          stepCompleted = false;
+          render();
+        }
+      });
+    };
+
+    render();
+  }
+
   public openInventory(): void {
     this.activeModal = 'inventory';
     this.modalOverlay.style.display = 'flex';

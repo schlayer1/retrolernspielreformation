@@ -133,7 +133,45 @@ async function main() {
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_8_pause_dashboard.png') });
     console.log('✅ verify_8_pause_dashboard.png captured');
 
-    console.log('\n🎉 ALL 8 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
+    // Close Pause Dashboard
+    await page.click('#btn-pause-close');
+    await sleep(400);
+
+    // 9. Open Didactic Station Modal (Cranach-Druckerpresse)
+    console.log('9. Opening Didactic Station Modal...');
+    await page.evaluate(() => {
+      const ui = (window.__GAME__.scene.getScene('UIScene'));
+      ui.openStationModal('station_druckerei');
+    });
+    await sleep(600);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_9_station_modal.png') });
+    console.log('✅ verify_9_station_modal.png captured');
+
+    // Close Station Modal
+    await page.click('#btn-station-close');
+    await sleep(400);
+
+    // 10. Hefterblatt A4 Worksheet Preview
+    console.log('10. Capturing Hefterblatt Worksheet Preview...');
+    await page.evaluate(() => {
+      const ps = document.getElementById('hefter-print-sheet');
+      if (ps) {
+        ps.style.display = 'block';
+        ps.style.position = 'fixed';
+        ps.style.top = '0';
+        ps.style.left = '0';
+        ps.style.width = '100vw';
+        ps.style.height = '100vh';
+        ps.style.zIndex = '99999';
+        ps.style.overflowY = 'auto';
+        ps.style.background = '#ffffff';
+      }
+    });
+    await sleep(500);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_10_print_sheet.png') });
+    console.log('✅ verify_10_print_sheet.png captured');
+
+    console.log('\n🎉 ALL 10 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
   } catch (err) {
     console.error('Browser verification failed:', err);
     process.exit(1);
