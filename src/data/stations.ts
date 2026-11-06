@@ -180,8 +180,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Sprachschöpfung',
     intro: 'Als „Junker Jörg“ übersetzt Luther das griechische Neue Testament. Wähle die kraftvollen deutschen Worte, die bis heute unser Sprechen prägen!',
     historicalPillar: 'Entstehung der deutschen Schriftsprache',
-    x: 22 * 16,
-    y: 64 * 16,
+    x: 12 * 16,
+    y: 74 * 16,
     steps: [
       {
         id: 'step_1',

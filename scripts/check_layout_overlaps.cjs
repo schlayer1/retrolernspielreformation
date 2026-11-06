@@ -54,7 +54,7 @@ if (fs.existsSync(path.join(ROOT, 'src/data/decor.ts'))) {
   const decorCode = fs.readFileSync(path.join(ROOT, 'src/data/decor.ts'), 'utf8');
   const decorBlockMatch = decorCode.match(/export const REFORMATION_DECOR: DecorObject\[\] = \[([\s\S]*?)\];/);
   const decorBlock = decorBlockMatch ? decorBlockMatch[1] : '';
-  const decorRegex = /\{\s*id:\s*'([^']+)'\s*,\s*x:\s*(\d+)\s*\*\s*16\s*,\s*y:\s*(\d+)\s*\*\s*16\s*,\s*spriteKey:\s*'([^']+)'(?:[^\}]+scale:\s*([0-9.]+))?/g;
+  const decorRegex = /\{\s*id:\s*'([^']+)'[\s\S]*?x:\s*(\d+)\s*\*\s*16[\s\S]*?y:\s*(\d+)\s*\*\s*16[\s\S]*?spriteKey:\s*'([^']+)'(?:[\s\S]*?scale:\s*([0-9.]+))?[^\}]*\}/g;
   let m;
   while ((m = decorRegex.exec(decorBlock)) !== null) {
     const id = m[1];

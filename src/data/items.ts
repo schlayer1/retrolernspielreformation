@@ -11,7 +11,8 @@ export type ReformationItemId =
   | 'heilkräuter'
   | 'apfel'
   | 'holz'
-  | 'papierbogen';
+  | 'papierbogen'
+  | 'flugblatt_sola_fide';
 
 export interface ReformationItem {
   id: ReformationItemId;
@@ -126,6 +127,14 @@ export const REFORMATION_ITEMS: Record<ReformationItemId, ReformationItem> = {
     description: 'Feines, festes Schöpfpapier aus Leinenhadern für den Buchdruck.',
     icon: '/assets/icons/pergament_codex.png',
     value: 5,
+  },
+  flugblatt_sola_fide: {
+    id: 'flugblatt_sola_fide',
+    name: 'Flugblatt „SOLA FIDE“ (1517)',
+    category: 'Druckerei & Schrift',
+    description: 'Eigenhändig an der Gutenberg-Presse gesetztes und gedrucktes Meisterstück: Luthers Lehre „Allein durch den Glauben“.',
+    icon: '/assets/icons/relic_codex.png',
+    value: 40,
   },
 };
 

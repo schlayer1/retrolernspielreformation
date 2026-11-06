@@ -137,11 +137,11 @@ async function main() {
     await page.click('#btn-pause-close');
     await sleep(400);
 
-    // 9. Open Didactic Station Modal (Cranach-Druckerpresse)
+    // 9. Open Didactic Station Modal (Tetzel-Ablasskasse)
     console.log('9. Opening Didactic Station Modal...');
     await page.evaluate(() => {
       const ui = (window.__GAME__.scene.getScene('UIScene'));
-      ui.openStationModal('station_druckerei');
+      ui.openStationModal('station_ablass');
     });
     await sleep(600);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_9_station_modal.png') });
@@ -171,7 +171,34 @@ async function main() {
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_10_print_sheet.png') });
     console.log('✅ verify_10_print_sheet.png captured');
 
-    console.log('\n🎉 ALL 10 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
+    // Hide print sheet again
+    await page.evaluate(() => {
+      const ps = document.getElementById('hefter-print-sheet');
+      if (ps) ps.style.display = 'none';
+    });
+    await sleep(300);
+
+    // 11. Interior Warp: Wartburg-Schreibstube
+    console.log('11. Capturing Interior Warp (Wartburg-Stube)...');
+    await page.evaluate(() => {
+      const ws = (window.__GAME__.scene.getScene('WorldScene'));
+      ws.warpTo({ x: 108 * 16, y: 72 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' });
+    });
+    await sleep(700);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_11_interior_wartburg.png') });
+    console.log('✅ verify_11_interior_wartburg.png captured');
+
+    // 12. Gutenberg Workshop Simulator (Letternsatz & Winkelhaken)
+    console.log('12. Capturing Gutenberg Workshop Simulator...');
+    await page.evaluate(() => {
+      const ui = (window.__GAME__.scene.getScene('UIScene'));
+      ui.openGutenbergWorkshopModal();
+    });
+    await sleep(600);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_12_gutenberg_workshop.png') });
+    console.log('✅ verify_12_gutenberg_workshop.png captured');
+
+    console.log('\n🎉 ALL 12 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
   } catch (err) {
     console.error('Browser verification failed:', err);
     process.exit(1);

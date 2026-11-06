@@ -79,12 +79,32 @@ export class BootScene extends Phaser.Scene {
       'bench_stone',
       'barrel',
       'crates',
+      'hearth',
+      'bookcase',
+      'bookcase_narrow',
+      'book_pile',
+      'book_open',
+      'armchair_green',
     ];
     for (const p of props) {
       this.load.image(p, `/assets/props/${p}.png`);
     }
 
-    // 7. Relic icons
+    // 7. Interior Animated Strips
+    this.load.spritesheet('hearth_fire', '/assets/animations/hearth_fire_strip.png', {
+      frameWidth: 48,
+      frameHeight: 44,
+    });
+    this.load.spritesheet('dog_sleeping', '/assets/animations/dog_sleeping_strip.png', {
+      frameWidth: 48,
+      frameHeight: 14,
+    });
+    this.load.spritesheet('candle_lit', '/assets/animations/candle_lit_strip.png', {
+      frameWidth: 8,
+      frameHeight: 11,
+    });
+
+    // 8. Relic icons
     this.load.image('relic_marker_glow', '/assets/icons/relic_marker_glow.png');
     this.load.image('relic_codex', '/assets/icons/relic_codex.png');
     this.load.image('relic_lehnsurkunde', '/assets/icons/relic_lehnsurkunde.png');
@@ -132,6 +152,32 @@ export class BootScene extends Phaser.Scene {
         key: 'dog-idle',
         frames: this.anims.generateFrameNumbers('farm_dog_idle', { start: 0, end: 3 }),
         frameRate: 4,
+        repeat: -1,
+      });
+    }
+
+    // Interior Anims
+    if (this.textures.exists('hearth_fire') && !this.anims.exists('hearth-fire')) {
+      this.anims.create({
+        key: 'hearth-fire',
+        frames: this.anims.generateFrameNumbers('hearth_fire', { start: 0, end: 11 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('dog_sleeping') && !this.anims.exists('dog-sleeping-anim')) {
+      this.anims.create({
+        key: 'dog-sleeping-anim',
+        frames: this.anims.generateFrameNumbers('dog_sleeping', { start: 0, end: 3 }),
+        frameRate: 3,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('candle_lit') && !this.anims.exists('candle-lit-anim')) {
+      this.anims.create({
+        key: 'candle-lit-anim',
+        frames: this.anims.generateFrameNumbers('candle_lit', { start: 0, end: 3 }),
+        frameRate: 6,
         repeat: -1,
       });
     }

@@ -49,14 +49,27 @@ export const REFORMATION_DECOR: DecorObject[] = [
 
   // Wartburg & Junker Jörg (Süd-West: x: 14..32, y: 68..88)
   { id: 'wartburg_burgturm', name: 'Wartburg Bergfried & Palas', x: 20 * 16, y: 70 * 16, spriteKey: 'keep', scale: 1.1, isObstacle: true },
-  { id: 'wartburg_schreibpult', name: 'Luthers Schreibpult', x: 26 * 16, y: 68 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 0.9, isObstacle: true },
-
   // Bauernkrieg Frankenhausen (Süd-Mitte: x: 50..66, y: 66..88)
   { id: 'bauern_huette', name: 'Bauernkate Frankenhausen', x: 54 * 16, y: 70 * 16, spriteKey: 'peasant_thatched_cottage', scale: 1.0, isObstacle: true },
   { id: 'bauern_heuwagen', name: 'Heuwagen & Pflug', x: 52 * 16, y: 80 * 16, spriteKey: 'cart_hay', scale: 0.9, isObstacle: true },
 
   // Augsburg Friedenssaal 1555 (Südost: x: 70..88, y: 70..90)
   { id: 'augsburg_rathaus', name: 'Rathaussaal Augsburg 1555', x: 80 * 16, y: 72 * 16, spriteKey: 'fortress_gatehouse', scale: 1.0, isObstacle: true },
+
+  // --- INTERIEURS (Begehbare Sub-Maps) ---
+  // Cranach-Hofwerkstatt (x: 102..116, y: 14..26)
+  { id: 'cranach_in_bookcase', name: 'Schriftenregal der Werkstatt', x: 104 * 16, y: 16 * 16, spriteKey: 'bookcase', scale: 1.0, isObstacle: true },
+  { id: 'cranach_in_press', name: 'Gutenberg-Druckerpresse', x: 108 * 16, y: 18 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 1.0, isObstacle: true },
+  { id: 'cranach_in_desk', name: 'Meister Cranachs Zeichentisch', x: 112 * 16, y: 18 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 0.9, isObstacle: true },
+  { id: 'cranach_in_books', name: 'Stapel frisch geschöpftes Hadernpapier', x: 104 * 16, y: 22 * 16, spriteKey: 'book_pile', scale: 1.0, isObstacle: true },
+  { id: 'cranach_in_chair', name: 'Setzerstuhl', x: 112 * 16, y: 22 * 16, spriteKey: 'armchair_green', scale: 0.9, isObstacle: true },
+
+  // Wartburg Luthers Schreibstube (x: 102..116, y: 64..76)
+  { id: 'wartburg_in_hearth', name: 'Wärmender Kaminofen', x: 104 * 16, y: 66 * 16, spriteKey: 'hearth', scale: 1.0, isObstacle: true },
+  { id: 'wartburg_in_bookcase', name: 'Bücherregal mit Kirchenvätern', x: 113 * 16, y: 66 * 16, spriteKey: 'bookcase', scale: 1.0, isObstacle: true },
+  { id: 'wartburg_in_desk', name: 'Luthers Bibel-Übersetzungspult', x: 109 * 16, y: 68 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 1.0, isObstacle: true },
+  { id: 'wartburg_in_lectern', name: 'Griechisches Neues Testament (Erasmus)', x: 104 * 16, y: 71 * 16, spriteKey: 'monastery_book_lectern', scale: 0.9, isObstacle: true },
+  { id: 'wartburg_in_chair', name: 'Junker Jörgs Lehnsessel', x: 109 * 16, y: 71 * 16, spriteKey: 'armchair_green', scale: 0.9, isObstacle: true },
 ];
 
 export const RESOURCE_NODES: ResourceNode[] = [

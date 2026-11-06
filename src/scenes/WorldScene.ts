@@ -13,7 +13,7 @@ import { CompanionManager } from '../world/Companion';
 
 export interface InteractiveTarget {
   id: string;
-  kind: 'mentor' | 'resource' | 'relic' | 'station' | 'companion';
+  kind: 'mentor' | 'resource' | 'relic' | 'station' | 'companion' | 'door';
   name: string;
   sub: string;
   x: number;
@@ -22,6 +22,7 @@ export interface InteractiveTarget {
   itemId?: ReformationItemId;
   relic?: ReformationRelic;
   stationId?: string;
+  warpTarget?: { x: number; y: number; isIndoor: boolean; name: string };
   questChapter?: number;
   questObjectiveIndex?: number;
   questMessage?: string;
@@ -31,8 +32,8 @@ export interface InteractiveTarget {
 }
 
 export class WorldScene extends Phaser.Scene {
-  public mapW = 100;
-  public mapH = 80;
+  public mapW = 120;
+  public mapH = 90;
   public player!: Phaser.GameObjects.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
@@ -125,6 +126,20 @@ export class WorldScene extends Phaser.Scene {
     this.livingWorldManager.registerFireSource(48 * 16, 24 * 16, true, 28, 0xffa533); // Cranach Presse
     this.livingWorldManager.registerFireSource(26 * 16, 68 * 16, true, 32, 0xff7722); // Wartburg Kamin
     this.livingWorldManager.registerFireSource(72 * 16, 42 * 16, false, 20, 0xffaa44); // Tetzel Kanzel
+
+    // Animated Fireplace in Wartburg Stube
+    if (this.textures.exists('hearth_fire')) {
+      this.add.sprite(104 * 16, 66 * 16, 'hearth_fire').play('hearth-fire').setDepth(66 * 16 + 1);
+    }
+    // Sleeping Dog Tölpel in Wartburg Stube
+    if (this.textures.exists('dog_sleeping')) {
+      this.add.sprite(106 * 16, 68 * 16, 'dog_sleeping').play('dog-sleeping-anim').setDepth(68 * 16 + 1);
+    }
+    // Lit Candles on Desks
+    if (this.textures.exists('candle_lit')) {
+      this.add.sprite(109 * 16 + 8, 68 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(68 * 16 + 2);
+      this.add.sprite(112 * 16 + 8, 18 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(18 * 16 + 2);
+    }
 
     // 13. First Chapter Banner
     this.lastBannerChapter = gameState.chapter;
@@ -224,6 +239,14 @@ export class WorldScene extends Phaser.Scene {
         const inAugsburgPlaza = tx >= 68 && tx <= 84 && ty >= 14 && ty <= 28;
         const inWartburgCourt = tx >= 20 && tx <= 32 && ty >= 68 && ty <= 82;
 
+        // Interiors (Sub-Maps)
+        const inCranachInterior = tx >= 102 && tx <= 116 && ty >= 14 && ty <= 26;
+        const inWartburgInterior = tx >= 102 && tx <= 116 && ty >= 64 && ty <= 76;
+        const isWall =
+          (inCranachInterior && (tx <= 103 || tx >= 115 || ty <= 15 || ty >= 25)) ||
+          (inWartburgInterior && (tx <= 103 || tx >= 115 || ty <= 65 || ty >= 75));
+        const inVoid = tx >= 96 && !inCranachInterior && !inWartburgInterior;
+
         let bx = 1;
         let by = 1;
         let isWater = false;
@@ -257,7 +280,19 @@ export class WorldScene extends Phaser.Scene {
         for (let py = y; py < y + 2 && py < H; py++) {
           for (let px = x; px < x + 2 && px < W; px++) {
             let r: number, g: number, b: number;
-            if (isBridgePlank) {
+            if (inVoid) {
+              r = 12;
+              g = 11;
+              b = 16;
+            } else if (isWall) {
+              r = 54;
+              g = 44;
+              b = 36;
+            } else if (inCranachInterior || inWartburgInterior) {
+              [r, g, b] = sampleBlock(1, 0, px, py);
+              r = Math.min(255, Math.round(r * 1.15));
+              g = Math.min(255, Math.round(g * 1.05));
+            } else if (isBridgePlank) {
               const plankPattern = (px + (py % 4 === 0 ? 1 : 0)) % 6 === 0 ? 112 : 144;
               r = plankPattern;
               g = Math.round(plankPattern * 0.72);
@@ -297,7 +332,7 @@ export class WorldScene extends Phaser.Scene {
 
     const count = 140;
     for (let i = 0; i < count; i++) {
-      const tx = Phaser.Math.Between(4, this.mapW - 5);
+      const tx = Phaser.Math.Between(4, Math.min(94, this.mapW - 5));
       const ty = Phaser.Math.Between(4, this.mapH - 5);
       const frameKey = validFrames.length > 0 ? Phaser.Math.RND.pick(validFrames) : undefined;
 
@@ -415,6 +450,55 @@ export class WorldScene extends Phaser.Scene {
         actionTip: '[E] Station betreten',
       });
     }
+
+    // 5. Begehbare Innenräume & Warp-Türen (Sub-Maps)
+    this.targets.push({
+      id: 'door_enter_cranach',
+      kind: 'door',
+      name: 'Cranach Hofatelier & Druckerei',
+      sub: 'Offizin von Meister Lucas Cranach d. Ä.',
+      x: 44 * 16,
+      y: 16 * 16,
+      minChapter: 1,
+      actionTip: '[E] Werkstatt betreten',
+      warpTarget: { x: 108 * 16, y: 24 * 16, isIndoor: true, name: 'Cranachs Werkstatt & Druckerei' },
+    });
+
+    this.targets.push({
+      id: 'door_exit_cranach',
+      kind: 'door',
+      name: 'Hofportal Wittenberg',
+      sub: 'Hinaus auf den Marktplatz',
+      x: 108 * 16,
+      y: 25 * 16,
+      minChapter: 1,
+      actionTip: '[E] Hinaus auf den Hof',
+      warpTarget: { x: 44 * 16, y: 17 * 16, isIndoor: false, name: 'Wittenberg Hof' },
+    });
+
+    this.targets.push({
+      id: 'door_enter_wartburg',
+      kind: 'door',
+      name: 'Wartburg Palas-Pforte',
+      sub: 'Treppe zu Luthers Schreibstube',
+      x: 20 * 16,
+      y: 74 * 16,
+      minChapter: 1,
+      actionTip: '[E] Schreibstube betreten',
+      warpTarget: { x: 108 * 16, y: 74 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' },
+    });
+
+    this.targets.push({
+      id: 'door_exit_wartburg',
+      kind: 'door',
+      name: 'Ausgang zum Burghof',
+      sub: 'Hinaus auf den Schlosshof',
+      x: 108 * 16,
+      y: 75 * 16,
+      minChapter: 1,
+      actionTip: '[E] Hinaus auf den Burghof',
+      warpTarget: { x: 20 * 16, y: 75 * 16, isIndoor: false, name: 'Wartburg Burghof' },
+    });
   }
 
   private initInteractionLabel(): void {
@@ -564,10 +648,46 @@ export class WorldScene extends Phaser.Scene {
       uiScene.openRelicModal(t.relic);
     } else if (t.kind === 'station' && t.stationId) {
       uiScene.openStationModal(t.stationId);
+    } else if (t.kind === 'door' && t.warpTarget) {
+      this.warpTo(t.warpTarget);
     } else if (t.kind === 'resource' && t.nodeDef) {
       gameState.addItem(t.nodeDef.lootItem as ReformationItemId, t.nodeDef.lootCount);
       uiScene.showToast(`+${t.nodeDef.lootCount} ${t.nodeDef.name} gesammelt!`);
       sound.questStep();
     }
+  }
+
+  public warpTo(target: { x: number; y: number; isIndoor: boolean; name: string }): void {
+    sound.door();
+    const cam = this.cameras.main;
+    cam.fadeOut(160, 0, 0, 0);
+
+    cam.once('camerafadeoutcomplete', () => {
+      this.player.x = target.x;
+      this.player.y = target.y;
+      this.player.setDepth(this.player.y);
+      gameState.playerX = target.x;
+      gameState.playerY = target.y;
+
+      if (target.isIndoor) {
+        if (target.y < 50 * 16) {
+          // Cranach Werkstatt
+          cam.setBounds(101 * 16, 13 * 16, 16 * 16, 14 * 16);
+        } else {
+          // Wartburg Stube
+          cam.setBounds(101 * 16, 63 * 16, 16 * 16, 14 * 16);
+        }
+      } else {
+        cam.setBounds(0, 0, 96 * 16, this.mapH * 16);
+      }
+
+      sound.setIndoorAcoustics(target.isIndoor);
+      cam.fadeIn(180, 0, 0, 0);
+
+      const uiScene = this.scene.get('UIScene') as any;
+      if (uiScene) {
+        uiScene.showToast(`🚪 ${target.name}`);
+      }
+    });
   }
 }

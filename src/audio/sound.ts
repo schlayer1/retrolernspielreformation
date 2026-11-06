@@ -4,15 +4,26 @@ class ReformationSynthesizer {
   private stepInterval: any = null;
   private stepIndex = 0;
   private masterGain: GainNode | null = null;
+  private currentChapter = 1;
+  private theme: 'choral' | 'lute' = 'choral';
 
   constructor(getContext: () => AudioContext | null) {
     this.getContext = getContext;
+  }
+
+  public setTheme(theme: 'choral' | 'lute'): void {
+    this.theme = theme;
+  }
+
+  public getTheme(): 'choral' | 'lute' {
+    return this.theme;
   }
 
   public start(chapter = 1, volume = 0.22): void {
     this.stop();
     this.isPlaying = true;
     this.stepIndex = 0;
+    this.currentChapter = chapter;
 
     const ctx = this.getContext();
     if (!ctx) return;
@@ -37,12 +48,12 @@ class ReformationSynthesizer {
           [174.61, 220.0, 261.63], // F
         ];
 
-    // Melodie: Reformation Choral
+    // Melodie: Reformation Choral vs. Renaissance-Lied
     const leadMelody = isDramatic
       ? [440, 440, 440, 392, 440, 523.25, 493.88, 440]
       : [523.25, 523.25, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88];
 
-    const stepDuration = 0.24;
+    const stepDuration = this.theme === 'lute' ? 0.20 : 0.24;
 
     this.stepInterval = setInterval(() => {
       if (!this.isPlaying) return;
@@ -57,44 +68,95 @@ class ReformationSynthesizer {
 
       const now = actx.currentTime;
 
-      // 1. Orgel / Gamben-Arpeggio
-      const arpOsc = actx.createOscillator();
-      const arpGain = actx.createGain();
-      arpOsc.type = 'triangle';
-      arpOsc.frequency.setValueAtTime(arpNote, now);
-      arpGain.gain.setValueAtTime(0.08, now);
-      arpGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 0.9);
-      arpOsc.connect(arpGain);
-      arpGain.connect(this.masterGain);
-      arpOsc.start(now);
-      arpOsc.stop(now + stepDuration);
+      if (this.theme === 'lute') {
+        // --- RENAISSANCE-LAUTE (Plucked acoustic strings with resonant body) ---
+        const luteOsc = actx.createOscillator();
+        const luteGain = actx.createGain();
+        const luteFilter = actx.createBiquadFilter();
 
-      // 2. Orgel-Pedal Bass
-      if (this.stepIndex % 4 === 0) {
-        const bassOsc = actx.createOscillator();
-        const bassGain = actx.createGain();
-        bassOsc.type = 'sine';
-        bassOsc.frequency.setValueAtTime(bassNote, now);
-        bassGain.gain.setValueAtTime(0.18, now);
-        bassGain.gain.exponentialRampToValueAtTime(0.01, now + stepDuration * 3.8);
-        bassOsc.connect(bassGain);
-        bassGain.connect(this.masterGain);
-        bassOsc.start(now);
-        bassOsc.stop(now + stepDuration * 4);
-      }
+        luteOsc.type = 'triangle';
+        luteOsc.frequency.setValueAtTime(arpNote, now);
+        luteFilter.type = 'bandpass';
+        luteFilter.frequency.setValueAtTime(950, now);
+        luteFilter.Q.setValueAtTime(2.2, now);
 
-      // 3. Choral Lead-Stimme
-      if (this.stepIndex % 2 === 0) {
-        const leadOsc = actx.createOscillator();
-        const leadGain = actx.createGain();
-        leadOsc.type = isDramatic ? 'sawtooth' : 'triangle';
-        leadOsc.frequency.setValueAtTime(leadNote, now);
-        leadGain.gain.setValueAtTime(0.07, now);
-        leadGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 1.8);
-        leadOsc.connect(leadGain);
-        leadGain.connect(this.masterGain);
-        leadOsc.start(now);
-        leadOsc.stop(now + stepDuration * 2);
+        luteGain.gain.setValueAtTime(0.14, now);
+        luteGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 0.75);
+
+        luteOsc.connect(luteFilter);
+        luteFilter.connect(luteGain);
+        luteGain.connect(this.masterGain);
+        luteOsc.start(now);
+        luteOsc.stop(now + stepDuration * 0.8);
+
+        // Traversflöte Lead
+        if (this.stepIndex % 2 === 0) {
+          const fluteOsc = actx.createOscillator();
+          const fluteGain = actx.createGain();
+          fluteOsc.type = 'sine';
+          fluteOsc.frequency.setValueAtTime(leadNote, now);
+          fluteGain.gain.setValueAtTime(0.05, now);
+          fluteGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 1.6);
+          fluteOsc.connect(fluteGain);
+          fluteGain.connect(this.masterGain);
+          fluteOsc.start(now);
+          fluteOsc.stop(now + stepDuration * 1.8);
+        }
+
+        // Lute Bourdon Drone Bass
+        if (this.stepIndex % 4 === 0) {
+          const bassOsc = actx.createOscillator();
+          const bassGain = actx.createGain();
+          bassOsc.type = 'triangle';
+          bassOsc.frequency.setValueAtTime(bassNote * 1.5, now);
+          bassGain.gain.setValueAtTime(0.12, now);
+          bassGain.gain.exponentialRampToValueAtTime(0.005, now + stepDuration * 2.8);
+          bassOsc.connect(bassGain);
+          bassGain.connect(this.masterGain);
+          bassOsc.start(now);
+          bassOsc.stop(now + stepDuration * 3);
+        }
+      } else {
+        // --- SAKRAL-ORGEL & GAMBE (Choral) ---
+        // 1. Orgel / Gamben-Arpeggio
+        const arpOsc = actx.createOscillator();
+        const arpGain = actx.createGain();
+        arpOsc.type = 'triangle';
+        arpOsc.frequency.setValueAtTime(arpNote, now);
+        arpGain.gain.setValueAtTime(0.08, now);
+        arpGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 0.9);
+        arpOsc.connect(arpGain);
+        arpGain.connect(this.masterGain);
+        arpOsc.start(now);
+        arpOsc.stop(now + stepDuration);
+
+        // 2. Orgel-Pedal Bass
+        if (this.stepIndex % 4 === 0) {
+          const bassOsc = actx.createOscillator();
+          const bassGain = actx.createGain();
+          bassOsc.type = 'sine';
+          bassOsc.frequency.setValueAtTime(bassNote, now);
+          bassGain.gain.setValueAtTime(0.18, now);
+          bassGain.gain.exponentialRampToValueAtTime(0.01, now + stepDuration * 3.8);
+          bassOsc.connect(bassGain);
+          bassGain.connect(this.masterGain);
+          bassOsc.start(now);
+          bassOsc.stop(now + stepDuration * 4);
+        }
+
+        // 3. Choral Lead-Stimme
+        if (this.stepIndex % 2 === 0) {
+          const leadOsc = actx.createOscillator();
+          const leadGain = actx.createGain();
+          leadOsc.type = isDramatic ? 'sawtooth' : 'triangle';
+          leadOsc.frequency.setValueAtTime(leadNote, now);
+          leadGain.gain.setValueAtTime(0.07, now);
+          leadGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 1.8);
+          leadOsc.connect(leadGain);
+          leadGain.connect(this.masterGain);
+          leadOsc.start(now);
+          leadOsc.stop(now + stepDuration * 2);
+        }
       }
 
       this.stepIndex = (this.stepIndex + 1) % (chordProgressions.length * 4);
@@ -200,6 +262,33 @@ export class SoundManager {
 
   public getVolume(): number {
     return this.volume;
+  }
+
+  public setTheme(theme: 'choral' | 'lute'): void {
+    this.synth.setTheme(theme);
+    if (!this.muted) {
+      this.synth.start(1, this.volume * 0.7);
+    }
+  }
+
+  public getTheme(): 'choral' | 'lute' {
+    return this.synth.getTheme();
+  }
+
+  public toggleTheme(): 'choral' | 'lute' {
+    const next = this.synth.getTheme() === 'choral' ? 'lute' : 'choral';
+    this.setTheme(next);
+    return next;
+  }
+
+  public setIndoorAcoustics(indoor: boolean): void {
+    const desired = indoor ? 'lute' : 'choral';
+    if (this.synth.getTheme() !== desired) {
+      this.synth.setTheme(desired);
+      if (!this.muted) {
+        this.synth.start(1, this.volume * (indoor ? 0.6 : 0.7));
+      }
+    }
   }
 
   // SFX Synthesizer

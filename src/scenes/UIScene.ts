@@ -341,7 +341,262 @@ export class UIScene extends Phaser.Scene {
     document.getElementById('btn-relic-close')?.addEventListener('click', () => this.closeModal());
   }
 
+  public openGutenbergWorkshopModal(onComplete?: () => void): void {
+    this.activeModal = 'station';
+    this.modalOverlay.style.display = 'flex';
+
+    let phase: 1 | 2 | 3 | 4 = 1;
+    let composedLetters: string[] = [];
+    const targetWord = 'SOLA FIDE';
+    const letterChoices = ['S', 'O', 'L', 'A', 'F', 'I', 'D', 'E', 'R', 'T', 'M', 'G', 'P'];
+
+    const render = () => {
+      if (phase === 1) {
+        const isComplete = composedLetters.join('') === targetWord;
+        this.modalOverlay.innerHTML = `
+          <div class="station-card" style="max-width: 680px;">
+            <div class="modal-header">
+              <div>
+                <span class="relic-epoch">Wittenberg 1517 • Werkstatt Cranach</span>
+                <h2>⚙️ Der Gutenberg-Setzkasten & Winkelhaken</h2>
+              </div>
+              <button id="btn-station-close" class="btn-close">✕</button>
+            </div>
+
+            <div style="font-size:12px; color:#4b5563; margin-bottom:12px; line-height:1.4;">
+              Luthers Flugschrift <strong>„SOLA FIDE“</strong> (Allein durch den Glauben) muss im Winkelhaken gesetzt werden.
+              <br/><strong style="color:#b45309;">⚠️ Eisernes Druckergesetz:</strong> Der Bleistempel druckt spiegelverkehrt ab!
+            </div>
+
+            <!-- Winkelhaken (Composing Stick) -->
+            <div style="background:#1e293b; border:2px solid #94a3b8; border-radius:8px; padding:12px; margin-bottom:14px; text-align:center;">
+              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                Messing-Winkelhaken (Spiegelverkehrter Satz im Zeilenschiff)
+              </div>
+              <div style="min-height:48px; background:#0f172a; border:1.5px dashed #475569; border-radius:6px; display:flex; align-items:center; justify-content:center; gap:6px; padding:4px 8px;">
+                ${
+                  composedLetters.length === 0
+                    ? '<span style="color:#64748b; font-size:11px;">[Setzkasten leer. Klicke unten auf die Bleilettern]</span>'
+                    : composedLetters
+                        .map((l) =>
+                          l === ' '
+                            ? '<span style="display:inline-block; width:18px; height:32px; background:#334155; border-radius:3px; border:1px solid #475569;" title="Spatium (Leerzeichen)"></span>'
+                            : `<span style="display:inline-flex; width:28px; height:34px; background:#e2e8f0; color:#0f172a; font-family:\'Cinzel\',serif; font-weight:900; font-size:18px; border-radius:4px; border:2px solid #94a3b8; align-items:center; justify-content:center; box-shadow:inset 0 1px 3px rgba(0,0,0,0.3); transform:scaleX(-1) scaleY(-1);">${l}</span>`
+                        )
+                        .join('')
+                }
+              </div>
+              <div style="margin-top:6px; font-size:11px; color:${isComplete ? '#4ade80' : '#cbd5e1'}; font-weight:600;">
+                Gelesener Abdruck: „${composedLetters.join('')}“ ${isComplete ? '✓ (Exakt 9 Zeichen)' : ''}
+              </div>
+            </div>
+
+            <!-- Setzkasten (Lead Type Drawer) -->
+            <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:10px; margin-bottom:12px;">
+              <div style="font-size:11px; font-weight:700; color:#78350f; margin-bottom:6px;">
+                Bleilettern aus dem Setzkasten wählen:
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                ${letterChoices
+                  .map(
+                    (ch) => `
+                  <button class="btn-sub btn-letter" data-char="${ch}" style="min-width:34px; padding:6px 10px; font-weight:700; font-size:13px; font-family:\'Cinzel\',serif;">
+                    ${ch}
+                  </button>
+                `
+                  )
+                  .join('')}
+                <button id="btn-space" class="btn-sub" style="padding:6px 12px; font-size:11px; font-weight:600;">
+                  ␣ Spatium (Leerzeichen)
+                </button>
+                <button id="btn-backspace" class="btn-sub" style="padding:6px 12px; font-size:11px; font-weight:600; color:#b91c1c;">
+                  ⌫ Rückgängig
+                </button>
+              </div>
+            </div>
+
+            <!-- Action Footer -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+              <button id="btn-cancel" class="btn-sub">Abbrechen</button>
+              <button id="btn-next-phase" class="btn-primary" style="display:${isComplete ? 'inline-block' : 'none'};">
+                Schritt 2: Druckerschwärze auftragen 🖌️ ➔
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btn-workshop-close')?.addEventListener('click', () => this.closeModal());
+        document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
+        document.getElementById('btn-cancel')?.addEventListener('click', () => this.closeModal());
+
+        this.modalOverlay.querySelectorAll('.btn-letter').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const ch = btn.getAttribute('data-char');
+            if (ch && composedLetters.length < 12) {
+              sound.click();
+              composedLetters.push(ch);
+              render();
+            }
+          });
+        });
+
+        document.getElementById('btn-space')?.addEventListener('click', () => {
+          if (composedLetters.length > 0 && composedLetters[composedLetters.length - 1] !== ' ') {
+            sound.click();
+            composedLetters.push(' ');
+            render();
+          }
+        });
+
+        document.getElementById('btn-backspace')?.addEventListener('click', () => {
+          sound.click();
+          composedLetters.pop();
+          render();
+        });
+
+        document.getElementById('btn-next-phase')?.addEventListener('click', () => {
+          sound.success();
+          phase = 2;
+          render();
+        });
+      } else if (phase === 2) {
+        this.modalOverlay.innerHTML = `
+          <div class="station-card" style="max-width: 680px;">
+            <div class="modal-header">
+              <div>
+                <span class="relic-epoch">Schritt 2 von 4 • Farbküche</span>
+                <h2>🖌️ Druckerschwärze auftragen</h2>
+              </div>
+              <button id="btn-station-close" class="btn-close">✕</button>
+            </div>
+
+            <div style="text-align:center; padding:16px 0;">
+              <div style="font-size:42px; margin-bottom:8px;">🪵 🖌️ 📜</div>
+              <p style="font-size:13px; color:#374151; max-width:500px; margin:0 auto 16px; line-height:1.5;">
+                Die Bleilettern liegen fest im Zeilenschiff. Nun müssen die beiden ledernen <strong>Druckballen</strong> mit kochendem <em>Leinölfirnis</em> und feinstem <em>Kienruß</em> gleichmäßig über den Satz geschlagen werden.
+              </p>
+
+              <button id="btn-apply-ink" class="btn-primary" style="padding:10px 24px; font-size:14px;">
+                Druckballen schlagen (Farbe auftragen) ➔
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btn-workshop-close')?.addEventListener('click', () => this.closeModal());
+        document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
+        document.getElementById('btn-apply-ink')?.addEventListener('click', () => {
+          sound.click();
+          phase = 3;
+          render();
+        });
+      } else if (phase === 3) {
+        this.modalOverlay.innerHTML = `
+          <div class="station-card" style="max-width: 680px;">
+            <div class="modal-header">
+              <div>
+                <span class="relic-epoch">Schritt 3 von 4 • Spindelpresse</span>
+                <h2>⚙️ Die Druckerpresse spannen</h2>
+              </div>
+              <button id="btn-station-close" class="btn-close">✕</button>
+            </div>
+
+            <div style="text-align:center; padding:16px 0;">
+              <div style="font-size:46px; margin-bottom:10px;">🔩 📐 📜</div>
+              <p style="font-size:13px; color:#374151; max-width:500px; margin:0 auto 16px; line-height:1.5;">
+                Das feuchte Hadernpapier liegt auf dem Druckstock. Lege den hölzernen <strong>Schwengel</strong> der Eichenpresse mit vollem Körpereinsatz um, um den nötigen Druck zu erzeugen!
+              </p>
+
+              <button id="btn-press-lever" class="btn-primary" style="padding:12px 28px; font-size:14px; background:#b45309; border-color:#78350f;">
+                Presse mit Hebelzug spannen ⚙️
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btn-workshop-close')?.addEventListener('click', () => this.closeModal());
+        document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
+        document.getElementById('btn-press-lever')?.addEventListener('click', () => {
+          sound.door();
+          phase = 4;
+          render();
+        });
+      } else if (phase === 4) {
+        gameState.addItem('flugblatt_sola_fide', 1);
+        gameState.knowledge += 25;
+        gameState.courage += 10;
+        gameState.completeObjective(2, 2);
+        sound.questStep();
+
+        this.modalOverlay.innerHTML = `
+          <div class="station-card" style="max-width: 680px; background:#fffbeb; border:2.5px solid #d97706;">
+            <div class="modal-header">
+              <div>
+                <span class="relic-epoch" style="color:#b45309;">Meisterstück vollendet • Wittenberg 1517</span>
+                <h2 style="color:#78350f;">📜 Frischer Flugblatt-Abzug</h2>
+              </div>
+              <button id="btn-station-close" class="btn-close">✕</button>
+            </div>
+
+            <!-- Historischer Flugblatt-Körper -->
+            <div style="background:#ffffff; border:2px solid #b45309; border-radius:8px; padding:20px; text-align:center; margin-bottom:16px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+              <div style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#78350f; margin-bottom:8px;">
+                Disputatio pro declaratione virtutis indulgentiarum
+              </div>
+              <h1 style="font-family:\'Cinzel\',serif; font-size:26px; color:#991b1b; margin:6px 0 10px; font-weight:900; letter-spacing:3px;">
+                SOLA FIDE
+              </h1>
+              <div style="font-size:13px; font-weight:600; color:#1f2937; margin-bottom:12px;">
+                Allein durch den Glauben • Aus Gnade gerechtfertigt
+              </div>
+              <p style="font-size:12px; color:#4b5563; line-height:1.6; max-width:520px; margin:0 auto; font-style:italic;">
+                „Der Gerechte wird aus dem Glauben leben. Weder Gold noch Tetzels Ablassbriefe erlösen die Seele vor Gott, sondern allein das lebendige Vertrauen auf das Evangelium Christi.“
+              </p>
+              <div style="margin-top:14px; font-size:10px; color:#9ca3af; border-top:1px solid #e5e7eb; padding-top:8px;">
+                Gedruckt in der Offizin Lucas Cranach d. Ä. zu Wittenberg im Jahre des Herrn 1517
+              </div>
+            </div>
+
+            <!-- Belohnung -->
+            <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:10px 14px; font-size:12px; color:#065f46; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+              <span>🏆 <strong>Gegenstand erhalten:</strong> Flugblatt „SOLA FIDE“ (1517)</span>
+              <span><strong>+25 Bildung</strong> · <strong>+10 Mut</strong></span>
+            </div>
+
+            <div style="text-align:right;">
+              <button id="btn-finish-workshop" class="btn-primary" style="padding:10px 22px;">
+                Flugblatt einstecken &amp; weiterziehen ➔
+              </button>
+            </div>
+          </div>
+        `;
+
+        const handleClose = () => {
+          this.closeModal();
+          this.renderHUD();
+          if (onComplete) onComplete();
+        };
+        document.getElementById('btn-workshop-close')?.addEventListener('click', handleClose);
+        document.getElementById('btn-station-close')?.addEventListener('click', handleClose);
+
+        document.getElementById('btn-finish-workshop')?.addEventListener('click', () => {
+          this.closeModal();
+          this.renderHUD();
+          this.showToast('📜 Flugblatt „SOLA FIDE“ im Inventar verstaut!');
+          if (onComplete) onComplete();
+        });
+      }
+    };
+
+    render();
+  }
+
   public openStationModal(stationId: string): void {
+    if (stationId === 'station_druckerei') {
+      this.openGutenbergWorkshopModal();
+      return;
+    }
+
     const station = REFORMATION_STATIONS.find((s) => s.id === stationId);
     if (!station) return;
 
@@ -635,9 +890,9 @@ export class UIScene extends Phaser.Scene {
             <span style="color:#b45309; font-weight:700;">Jetzt drucken [U]</span>
           </div>
           <div class="pause-tile" id="tile-audio-setting" style="cursor: pointer;">
-            <span class="tile-icon">${sound.isMuted() ? '🔇' : '🎵'}</span>
+            <span class="tile-icon">${sound.isMuted() ? '🔇' : sound.getTheme() === 'lute' ? '🪕' : '🎵'}</span>
             <strong>Klangkulisse</strong>
-            <span>${sound.isMuted() ? 'Stumm geschaltet' : 'Aktiviert (WebAudio)'}</span>
+            <span>${sound.isMuted() ? 'Stumm geschaltet' : sound.getTheme() === 'lute' ? 'Renaissance-Laute' : 'Sakral-Orgel (Choral)'}</span>
           </div>
         </div>
 
@@ -654,7 +909,14 @@ export class UIScene extends Phaser.Scene {
       this.printSheet.print();
     });
     document.getElementById('tile-audio-setting')?.addEventListener('click', () => {
-      sound.toggleMute();
+      if (sound.isMuted()) {
+        sound.toggleMute();
+        sound.setTheme('choral');
+      } else if (sound.getTheme() === 'choral') {
+        sound.setTheme('lute');
+      } else {
+        sound.toggleMute();
+      }
       this.openPauseDashboard();
     });
     document.getElementById('btn-save-state')?.addEventListener('click', () => {
