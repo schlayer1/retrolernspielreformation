@@ -96,7 +96,9 @@ async function main() {
       const r = (window.__GAME__.scene.getScene('WorldScene')).targets.find((t) => t.relic);
       if (r && r.relic) ui.openRelicModal(r.relic);
     });
-    await sleep(600);
+    await sleep(400);
+    await page.click('#btn-relic-flip');
+    await sleep(500);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_5_relic_modal.png') });
     console.log('✅ verify_5_relic_modal.png captured');
 
@@ -118,6 +120,14 @@ async function main() {
     // 7. Open Lexicon
     console.log('7. Opening Lexicon...');
     await page.click('#btn-lex');
+    await sleep(400);
+    await page.evaluate(() => {
+      const lockedItem = document.querySelector('.lex-list-item.locked');
+      if (lockedItem) lockedItem.click();
+    });
+    await sleep(500);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_7_lexicon.png') });
+    console.log('✅ verify_7_lexicon.png captured');
     await sleep(600);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_7_lexicon.png') });
     console.log('✅ verify_7_lexicon.png captured');
@@ -232,7 +242,17 @@ async function main() {
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_15_interior_kloster.png') });
     console.log('✅ verify_15_interior_kloster.png captured');
 
-    console.log('\n🎉 ALL 15 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
+    // 16. Historical Rats-Dilemma Modal
+    console.log('16. Capturing Historical Rats-Dilemma Modal...');
+    await page.evaluate(() => {
+      const ui = (window.__GAME__.scene.getScene('UIScene'));
+      ui.openDilemmaModal(1);
+    });
+    await sleep(700);
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_16_dilemma_modal.png') });
+    console.log('✅ verify_16_dilemma_modal.png captured');
+
+    console.log('\n🎉 ALL 16 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
   } catch (err) {
     console.error('Browser verification failed:', err);
     process.exit(1);

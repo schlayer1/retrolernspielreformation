@@ -159,6 +159,9 @@ export class UIScene extends Phaser.Scene {
             )
             .join('')}
         </div>
+        <div id="hud-compass" class="hud-compass-box">
+          ${gameState.compassText || '🧭 <strong>Ziel:</strong> Folge dem goldenen Wegweiser'}
+        </div>
         <div class="quest-footer">
           <span>Ort: <strong>${curCh.location}</strong></span>
         </div>
@@ -238,15 +241,23 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  public openMentorDialog(mentor: MentorData): void {
+  public openMentorDialog(mentor: MentorData, onClose?: () => void): void {
     this.activeModal = 'dialog';
     this.modalOverlay.style.display = 'flex';
+
+    const pKey = mentor.portraitKey || 'luther_young';
+    const neutralSrc = `/assets/portraits/${pKey}_neutral.png`;
+    const happySrc = `/assets/portraits/${pKey}_happy.png`;
+
+    const hasDilemma = REFORMATION_DILEMMAS.some(
+      (d) => d.chapter === gameState.chapter && !gameState.storyFlags[`dilemma_ch${d.chapter}_done`]
+    );
 
     this.modalOverlay.innerHTML = `
       <div class="dialog-box-card">
         <div class="dialog-speaker-header">
-          <div class="portrait-box">
-            <img src="/assets/icons/relic_codex.png" class="portrait-img" alt="${mentor.name}" />
+          <div class="portrait-box-64">
+            <img id="mentor-portrait-img" src="${neutralSrc}" class="portrait-img-64" alt="${mentor.name}" />
           </div>
           <div class="speaker-info">
             <h2 class="speaker-name">${mentor.name}</h2>
@@ -258,21 +269,65 @@ export class UIScene extends Phaser.Scene {
           <p class="dialog-speech-text">${mentor.speech}</p>
         </div>
 
-        <div class="dialog-actions">
+        <div class="dialog-actions" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          ${
+            hasDilemma
+              ? `<button id="btn-open-dilemma" class="btn-dilemma-trigger">⚖️ Historische Gewissensfrage verhandeln</button>`
+              : `<div></div>`
+          }
           <button id="btn-dialog-close" class="btn-primary">Verstanden, ich mache mich an die Arbeit ➔</button>
         </div>
       </div>
     `;
 
-    document.getElementById('btn-dialog-close')?.addEventListener('click', () => {
-      sound.click();
+    document.getElementById('btn-open-dilemma')?.addEventListener('click', () => {
       this.closeModal();
+      this.openDilemmaModal(gameState.chapter, () => {
+        onClose?.();
+      });
+    });
+
+    document.getElementById('btn-dialog-close')?.addEventListener('click', () => {
+      const img = document.getElementById('mentor-portrait-img') as HTMLImageElement | null;
+      if (img) {
+        img.src = happySrc;
+        img.style.transform = 'scale(1.08)';
+      }
+      sound.success();
+      setTimeout(() => {
+        this.closeModal();
+        onClose?.();
+      }, 350);
+    });
+  }
+
+  public openDilemmaModal(chapterNum?: number, onFinish?: () => void): void {
+    const ch = chapterNum ?? gameState.chapter;
+    const dilemma = REFORMATION_DILEMMAS.find((d) => d.chapter === ch);
+    if (!dilemma) return;
+
+    this.activeModal = 'dilemma';
+    this.dilemmaModal.open(dilemma, (choice) => {
+      gameState.storyFlags[`dilemma_ch${ch}_done`] = true;
+      gameState.dilemmaSummary += (gameState.dilemmaSummary ? ' | ' : '') + `K${ch}: ${choice.text}`;
+      gameState.courage += Math.round(choice.points / 2);
+      gameState.knowledge += Math.round(choice.points / 2);
+      this.showToast(`⚖️ Gewissensentscheidung: +${choice.points} Punkte!`);
+      this.renderHUD();
+      this.closeModal();
+      onFinish?.();
     });
   }
 
   public openRelicModal(relic: ReformationRelic): void {
     this.activeModal = 'relic';
     this.modalOverlay.style.display = 'flex';
+
+    const aversTitle = relic.aversTitle || relic.name;
+    const aversDetails = relic.aversDetails || relic.description;
+    const reversTitle = relic.reversTitle || 'Rückseite & Siegelabdruck';
+    const reversDetails = relic.reversDetails || relic.historicalSignificance;
+    const didacticSummary = relic.didacticSummary || relic.explanation;
 
     this.modalOverlay.innerHTML = `
       <div class="relic-modal-card">
@@ -283,12 +338,39 @@ export class UIScene extends Phaser.Scene {
         </div>
 
         <div class="relic-body">
-          <div class="relic-icon-center">
-            <img src="${relic.icon}" class="relic-large-icon" alt="${relic.name}" />
+          <div class="relic-flip-container">
+            <div id="relic-flip-card" class="relic-flip-card">
+              <!-- AVERS -->
+              <div class="relic-flip-face relic-face-avers">
+                <div class="relic-stamp">AVERS • VORDERSEITE DER ORIGINALQUELLE</div>
+                <div class="relic-icon-center">
+                  <img src="${relic.icon}" class="relic-large-icon" alt="${relic.name}" />
+                </div>
+                <h3 class="relic-face-title">${aversTitle}</h3>
+                <p class="relic-desc">${aversDetails}</p>
+              </div>
+
+              <!-- REVERS -->
+              <div class="relic-flip-face relic-face-revers">
+                <div class="relic-stamp">REVERS • RÜCKSEITE, SIEGEL & ZEUGNIS</div>
+                <div class="relic-icon-center">
+                  <span style="font-size: 38px; display:inline-block; margin: 6px 0;">📜</span>
+                </div>
+                <h3 class="relic-face-title">${reversTitle}</h3>
+                <p class="relic-desc">${reversDetails}</p>
+              </div>
+            </div>
           </div>
-          <p class="relic-desc">${relic.description}</p>
-          <div class="relic-significance">
-            <strong>Historische Bedeutung:</strong> ${relic.historicalSignificance}
+
+          <div style="text-align: center; margin: 10px 0 14px 0;">
+            <button id="btn-relic-flip" class="btn-sub" style="font-size: 11.5px; font-weight: 700; background: #fef3c7; border: 1.5px solid #b45309; color: #78350f;">
+              🔄 Fundstück wenden (360° Avers / Revers)
+            </button>
+          </div>
+
+          <div class="relic-didactic-box">
+            <span class="didactic-badge">💡 Didaktischer Merksatz für den Unterricht</span>
+            <p>${didacticSummary}</p>
           </div>
 
           <div class="relic-quiz-box">
@@ -306,11 +388,18 @@ export class UIScene extends Phaser.Scene {
           </div>
         </div>
 
-        <div class="relic-footer">
+        <div class="relic-footer" style="margin-top:14px; display:flex; justify-content:flex-end;">
           <button id="btn-relic-close" class="btn-sub">Schließen [ESC]</button>
         </div>
       </div>
     `;
+
+    // 3D Flip toggle
+    const flipCard = document.getElementById('relic-flip-card');
+    document.getElementById('btn-relic-flip')?.addEventListener('click', () => {
+      sound.click();
+      flipCard?.classList.toggle('flipped');
+    });
 
     const btns = this.modalOverlay.querySelectorAll('.quiz-opt-btn');
     const fb = document.getElementById('quiz-feedback');
@@ -318,7 +407,7 @@ export class UIScene extends Phaser.Scene {
     btns.forEach((btn) => {
       btn.addEventListener('click', () => {
         const idx = parseInt(btn.getAttribute('data-index') || '0', 10);
-        btns.forEach((b) => (b as HTMLButtonElement).disabled = true);
+        btns.forEach((b) => ((b as HTMLButtonElement).disabled = true));
 
         if (fb) {
           fb.style.display = 'block';
@@ -794,36 +883,113 @@ export class UIScene extends Phaser.Scene {
     this.activeModal = 'lexicon';
     this.modalOverlay.style.display = 'flex';
 
-    const selectedEntry = REFORMATION_LEXICON.find((l) => l.id === this.selectedLexiconId) || REFORMATION_LEXICON[0];
+    gameState.checkLexiconUnlocks();
+
+    const categories = [
+      'Alle',
+      'Glaube & Theologie',
+      'Medien & Handwerk',
+      'Politik & Reich',
+      'Persönlichkeiten',
+      'Gesellschaft & Aufruhr',
+    ];
+
+    const filteredEntries =
+      this.lexiconFilterCategory === 'Alle'
+        ? REFORMATION_LEXICON
+        : REFORMATION_LEXICON.filter((e) => e.category === this.lexiconFilterCategory);
+
+    let selectedEntry = REFORMATION_LEXICON.find((l) => l.id === this.selectedLexiconId);
+    if (!selectedEntry || (this.lexiconFilterCategory !== 'Alle' && selectedEntry.category !== this.lexiconFilterCategory)) {
+      selectedEntry = filteredEntries[0] || REFORMATION_LEXICON[0];
+      this.selectedLexiconId = selectedEntry.id;
+    }
+
+    const isUnlocked = gameState.unlockedLexicon.has(selectedEntry.id);
+    const unlockedCount = gameState.unlockedLexicon.size;
 
     this.modalOverlay.innerHTML = `
-      <div class="lexicon-card">
+      <div class="lexicon-card" style="max-width: 720px;">
         <div class="modal-header">
-          <h2>📖 Historisches Reformationslexikon</h2>
+          <div>
+            <span class="relic-epoch">Geschichts-Nachschlagewerk</span>
+            <h2>📖 Lexikon der Reformation (${unlockedCount} / ${REFORMATION_LEXICON.length} Begriffe freigeschaltet)</h2>
+          </div>
           <button id="btn-lex-close" class="btn-close">✕</button>
+        </div>
+
+        <div class="lex-filter-bar">
+          ${categories
+            .map(
+              (cat) => `
+            <button class="lex-cat-pill ${cat === this.lexiconFilterCategory ? 'active' : ''}" data-cat="${cat}">
+              ${cat}
+            </button>
+          `
+            )
+            .join('')}
         </div>
 
         <div class="lexicon-split">
           <div class="lex-list-col">
-            ${REFORMATION_LEXICON.map(
-              (l) => `
-              <div class="lex-list-item ${l.id === this.selectedLexiconId ? 'active' : ''}" data-id="${l.id}">
-                <strong>${l.term}</strong>
-                <span class="lex-cat">${l.category}</span>
-              </div>
-            `
-            ).join('')}
+            ${filteredEntries
+              .map((l) => {
+                const unlocked = gameState.unlockedLexicon.has(l.id);
+                const isActive = l.id === this.selectedLexiconId;
+                return `
+                <div class="lex-list-item ${isActive ? 'active' : ''} ${unlocked ? 'unlocked' : 'locked'}" data-id="${l.id}">
+                  <span class="lex-status-icon">${unlocked ? '📜' : '🔒'}</span>
+                  <div class="lex-item-texts">
+                    <strong>${unlocked ? l.term : '??? ' + l.term}</strong>
+                    <span class="lex-cat">${l.category}</span>
+                  </div>
+                </div>
+              `;
+              })
+              .join('')}
           </div>
 
           <div class="lex-detail-col">
-            <span class="detail-cat">${selectedEntry.category}</span>
-            <h3 class="detail-term">${selectedEntry.term}</h3>
-            <div class="detail-def">
-              <strong>Definition:</strong> ${selectedEntry.definition}
-            </div>
-            <div class="detail-context">
-              <strong>Historischer Kontext:</strong> ${selectedEntry.historicalContext}
-            </div>
+            ${
+              isUnlocked
+                ? `
+              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                  <span class="detail-cat" style="font-size:11px; font-weight:700; color:#b45309; text-transform:uppercase;">${selectedEntry.category}</span>
+                  <h3 class="detail-term" style="font-family:'Cinzel',serif; font-size:18px; font-weight:800; color:#78350f; margin:4px 0 10px 0;">${selectedEntry.term}</h3>
+                </div>
+                <button id="btn-lex-speak" class="btn-sub" style="font-size:11px; padding:5px 10px;" title="Begriff vorlesen">
+                  🔊 Vorlesen
+                </button>
+              </div>
+              <div class="detail-def" style="margin-top:8px; font-size:12.5px; line-height:1.5; color:#1f2937;">
+                <strong>Definition:</strong> ${selectedEntry.definition}
+              </div>
+              <div class="detail-context" style="margin-top:10px; font-size:12px; line-height:1.5; color:#4b5563;">
+                <strong>Historischer Kontext:</strong> ${selectedEntry.historicalContext}
+              </div>
+              <div class="detail-merksatz" style="margin-top:14px; background:#ecfdf5; border:1px solid #10b981; border-radius:8px; padding:10px 12px; font-size:11.5px; color:#065f46; line-height:1.45;">
+                <strong style="display:block; margin-bottom:2px;">💡 Merksatz für die Geschichtsstunde:</strong>
+                ${selectedEntry.merksatz}
+              </div>
+            `
+                : `
+              <div class="lex-locked-placeholder" style="text-align:center; padding:32px 16px;">
+                <div style="font-size:42px; margin-bottom:10px;">🔒</div>
+                <h3 style="font-family:'Cinzel',serif; color:#78350f; margin-bottom:8px;">${selectedEntry.term} ist noch versiegelt</h3>
+                <p style="font-size:12px; color:#6b7280; line-height:1.5; max-width:380px; margin:0 auto 16px;">
+                  Diesen geschichtlichen Begriff hast du noch nicht erforscht. Erforsche die Epoche, um das Wissen freizuschalten!
+                </p>
+                <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:12px; max-width:380px; margin:0 auto; font-size:12px; color:#92400e; text-align:left;">
+                  <strong>💡 Such-Tipp zum Freischalten:</strong><br/>
+                  ${selectedEntry.unlockHint}
+                  <div style="margin-top:6px; font-size:10.5px; color:#b45309;">
+                    Kapitel: Ab Kapitel ${selectedEntry.minChapter} verfügbar
+                  </div>
+                </div>
+              </div>
+            `
+            }
           </div>
         </div>
       </div>
@@ -831,17 +997,43 @@ export class UIScene extends Phaser.Scene {
 
     document.getElementById('btn-lex-close')?.addEventListener('click', () => this.closeModal());
 
-    const items = this.modalOverlay.querySelectorAll('.lex-list-item');
-    items.forEach((item) => {
+    this.modalOverlay.querySelectorAll('.lex-cat-pill').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const cat = pill.getAttribute('data-cat');
+        if (cat) {
+          this.lexiconFilterCategory = cat;
+          sound.click();
+          this.openLexiconModal();
+        }
+      });
+    });
+
+    this.modalOverlay.querySelectorAll('.lex-list-item').forEach((item) => {
       item.addEventListener('click', () => {
         const id = item.getAttribute('data-id');
         if (id) {
           this.selectedLexiconId = id;
           sound.click();
-          gameState.markLexiconRead(id);
+          if (gameState.unlockedLexicon.has(id)) {
+            gameState.markLexiconRead(id);
+          }
           this.openLexiconModal();
         }
       });
+    });
+
+    document.getElementById('btn-lex-speak')?.addEventListener('click', () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const text = `${selectedEntry.term}. ${selectedEntry.definition} ${selectedEntry.merksatz}`;
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'de-DE';
+        utter.rate = 0.95;
+        window.speechSynthesis.speak(utter);
+        this.showToast('🔊 Begriff wird vorgelesen...');
+      } else {
+        this.showToast('Sprachsynthese im Browser nicht verfügbar');
+      }
     });
   }
 

@@ -10,6 +10,8 @@ import { WildlifeManager } from '../world/Wildlife';
 import { LivingWorldManager } from '../world/LivingWorldManager';
 import { ChapterBanner } from '../ui/ChapterBanner';
 import { CompanionManager } from '../world/Companion';
+import { AtmosphereManager } from '../world/AtmosphereManager';
+import { AmbientSpeechManager } from '../world/AmbientSpeech';
 
 export interface InteractiveTarget {
   id: string;
@@ -54,6 +56,8 @@ export class WorldScene extends Phaser.Scene {
   public livingWorldManager!: LivingWorldManager;
   public chapterBanner!: ChapterBanner;
   public companionManager!: CompanionManager;
+  public atmosphereManager!: AtmosphereManager;
+  public ambientSpeechManager!: AmbientSpeechManager;
 
   private stepTimer = 0;
   private facing: 'down' | 'up' | 'left' | 'right' = 'down';
@@ -73,6 +77,10 @@ export class WorldScene extends Phaser.Scene {
     this.livingWorldManager = new LivingWorldManager(this);
     this.chapterBanner = new ChapterBanner();
     this.companionManager = new CompanionManager(this);
+    this.atmosphereManager = new AtmosphereManager(this);
+    this.atmosphereManager.init(this.mapW, this.mapH);
+    this.atmosphereManager.setChapterMood(gameState.chapter);
+    this.ambientSpeechManager = new AmbientSpeechManager(this);
 
     // 3. Dense Ground Flora Scattering
     this.scatterGroundFlora();
@@ -700,6 +708,9 @@ export class WorldScene extends Phaser.Scene {
     this.wildlifeManager.update(delta, this.player.x, this.player.y);
     this.livingWorldManager.update(delta);
     this.companionManager.update(this.player, this.targets, delta);
+    this.atmosphereManager.update(delta, this.cameras.main.scrollX, this.cameras.main.scrollY);
+    this.ambientSpeechManager.update(this.player.x, this.player.y, delta);
+    this.updateQuestCompass();
 
     // 4. Chapter Change Banner
     if (gameState.chapter !== this.lastBannerChapter) {
@@ -711,6 +722,7 @@ export class WorldScene extends Phaser.Scene {
           title: curCh.title,
           subtitle: `${curCh.year} · ${curCh.location}`,
         });
+        this.atmosphereManager.setChapterMood(curCh.number);
         sound.startBGM(curCh.number);
       }
     }
@@ -769,7 +781,8 @@ export class WorldScene extends Phaser.Scene {
     if (t.kind === 'mentor') {
       const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter);
       if (curCh) {
-        uiScene.openMentorDialog(curCh.mentor);
+        this.focusOnDialog(t.x, t.y);
+        uiScene.openMentorDialog(curCh.mentor, () => this.resetDialogFocus());
         gameState.completeObjective(curCh.number, 0);
       }
     } else if (t.kind === 'relic' && t.relic) {
@@ -782,6 +795,104 @@ export class WorldScene extends Phaser.Scene {
       gameState.addItem(t.nodeDef.lootItem as ReformationItemId, t.nodeDef.lootCount);
       uiScene.showToast(`+${t.nodeDef.lootCount} ${t.nodeDef.name} gesammelt!`);
       sound.questStep();
+    }
+  }
+
+  public focusOnDialog(targetX: number, targetY: number): void {
+    const cam = this.cameras.main;
+    this.tweens.add({
+      targets: cam,
+      zoom: 2.7,
+      duration: 450,
+      ease: 'Cubic.easeInOut',
+    });
+  }
+
+  public resetDialogFocus(): void {
+    const cam = this.cameras.main;
+    this.tweens.add({
+      targets: cam,
+      zoom: 2.2,
+      duration: 400,
+      ease: 'Cubic.easeInOut',
+    });
+  }
+
+  public updateQuestCompass(): void {
+    const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter);
+    if (!curCh) return;
+
+    const objectives = gameState.chapterObjectives[curCh.number] || [false, false, false, false];
+    let targetX = curCh.mentor.x;
+    let targetY = curCh.mentor.y;
+    let targetName = curCh.mentor.name;
+
+    // Stufen-Logik:
+    if (!objectives[0]) {
+      // Stufe 0: Sprich mit Mentor
+      targetX = curCh.mentor.x;
+      targetY = curCh.mentor.y;
+      targetName = curCh.mentor.name;
+    } else if (!objectives[1]) {
+      // Stufe 1: Zweites Ziel (z. B. Tür, Markt, Ablasskasten)
+      const interTarget = this.targets.find(
+        (t) => (t.kind === 'door' || t.kind === 'resource') && t.minChapter <= curCh.number
+      );
+      if (interTarget) {
+        targetX = interTarget.x;
+        targetY = interTarget.y;
+        targetName = interTarget.name;
+      }
+    } else if (!objectives[2] && curCh.stationId) {
+      // Stufe 2: Didaktische Station
+      const st = this.targets.find((t) => t.stationId === curCh.stationId);
+      if (st) {
+        targetX = st.x;
+        targetY = st.y;
+        targetName = st.name;
+      }
+    } else if (!objectives[3] && curCh.relicId) {
+      // Stufe 3: Primärquelle / Relikt
+      const r = this.targets.find((t) => t.relic?.id === curCh.relicId);
+      if (r) {
+        targetX = r.x;
+        targetY = r.y;
+        targetName = r.name;
+      }
+    } else if (objectives.every(Boolean)) {
+      gameState.compassText = '🎉 Kapitel-Aufgaben gelöst! Nächstes Kapitel bereit.';
+      const el = document.getElementById('hud-compass');
+      if (el) el.innerHTML = `<strong>🧭 Status:</strong> <span style="color:#34d399;">Kapitel ${curCh.number} vollständig gemeistert!</span>`;
+      return;
+    }
+
+    const dx = targetX - this.player.x;
+    const dy = targetY - this.player.y;
+    const distPx = Math.hypot(dx, dy);
+    const meters = Math.max(2, Math.round(distPx / 8));
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    let dirStr = '→ Osten';
+    if (angle >= -112.5 && angle < -67.5) dirStr = '↑ Norden';
+    else if (angle >= -67.5 && angle < -22.5) dirStr = '↗ Nordosten';
+    else if (angle >= -22.5 && angle < 22.5) dirStr = '→ Osten';
+    else if (angle >= 22.5 && angle < 67.5) dirStr = '↘ Südosten';
+    else if (angle >= 67.5 && angle < 112.5) dirStr = '↓ Süden';
+    else if (angle >= 112.5 && angle < 157.5) dirStr = '↙ Südwesten';
+    else if (angle >= -157.5 && angle < -112.5) dirStr = '↖ Nordwesten';
+    else dirStr = '← Westen';
+
+    let compassMsg = '';
+    if (distPx <= 36) {
+      compassMsg = `📍 Ziel direkt vor dir: <strong>${targetName}</strong> <span style="color:#fbbf24;">(Drücke [E])</span>`;
+    } else {
+      compassMsg = `🧭 <strong>${targetName}:</strong> <span style="color:#ffd86b;">${dirStr}</span> (${meters} m)`;
+    }
+
+    gameState.compassText = compassMsg;
+    const el = document.getElementById('hud-compass');
+    if (el) {
+      el.innerHTML = compassMsg;
     }
   }
 

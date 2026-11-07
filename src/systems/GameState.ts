@@ -1,5 +1,6 @@
 import { REFORMATION_ITEMS, ReformationItemId, REFORMATION_RECIPES } from '../data/items';
 import { REFORMATION_CHAPTERS, ChapterData } from '../data/chapters';
+import { REFORMATION_LEXICON } from '../data/lexicon';
 import { ReformationPlayerGender, ReformationPlayerRole, ReformationSaveData, SaveManager } from './SaveManager';
 
 export interface ReformationRoleDefinition {
@@ -49,6 +50,7 @@ export class GameState {
   public quizPerfect = new Set<number>();
   public discoveredRelics = new Set<string>();
   public lexiconRead = new Set<string>();
+  public unlockedLexicon = new Set<string>();
   public playerX = 22 * 16;
   public playerY = 24 * 16;
   public questCompleted = false;
@@ -85,6 +87,24 @@ export class GameState {
 
   constructor() {
     this.initDefaultInventory();
+    this.checkLexiconUnlocks();
+  }
+
+  public checkLexiconUnlocks(): string[] {
+    const newlyUnlocked: string[] = [];
+    for (const entry of REFORMATION_LEXICON) {
+      if (!this.unlockedLexicon.has(entry.id)) {
+        const canUnlock =
+          entry.minChapter <= this.chapter ||
+          (entry.unlockRelicId && this.discoveredRelics.has(entry.unlockRelicId)) ||
+          (entry.unlockCraftId && this.craftedOnce.has(entry.unlockCraftId as any));
+        if (canUnlock) {
+          this.unlockedLexicon.add(entry.id);
+          newlyUnlocked.push(entry.term);
+        }
+      }
+    }
+    return newlyUnlocked;
   }
 
   private initDefaultInventory(): void {
@@ -135,6 +155,7 @@ export class GameState {
           this.maxUnlockedChapter = Math.max(this.maxUnlockedChapter, ch + 1);
         }
       }
+      this.checkLexiconUnlocks();
       this.notify();
     }
   }
@@ -145,6 +166,7 @@ export class GameState {
       if (!this.chapterObjectives[ch]) {
         this.chapterObjectives[ch] = [false, false, false, false];
       }
+      this.checkLexiconUnlocks();
       this.notify();
     }
   }
@@ -248,6 +270,7 @@ export class GameState {
       role: this.role,
       discoveredRelics: Array.from(this.discoveredRelics),
       lexiconRead: Array.from(this.lexiconRead),
+      unlockedLexicon: Array.from(this.unlockedLexicon),
       playerName: this.playerName,
       playTimeSeconds: this.playTimeSeconds,
       walkedDistanceMeters: this.walkedDistanceMeters,
@@ -274,6 +297,7 @@ export class GameState {
     this.role = data.role || 'drucker';
     this.discoveredRelics = new Set(data.discoveredRelics || []);
     this.lexiconRead = new Set(data.lexiconRead || []);
+    this.unlockedLexicon = new Set(data.unlockedLexicon || []);
     this.playerName = data.playerName || 'Lucas';
     this.playTimeSeconds = data.playTimeSeconds || 0;
     this.walkedDistanceMeters = data.walkedDistanceMeters || 0;
@@ -282,6 +306,7 @@ export class GameState {
     this.knowledge = data.knowledge ?? 35;
     this.courage = data.courage ?? 40;
     this.piety = data.piety ?? 50;
+    this.checkLexiconUnlocks();
     return true;
   }
 }

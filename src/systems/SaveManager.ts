@@ -16,6 +16,7 @@ export interface ReformationSaveData {
   role: ReformationPlayerRole;
   discoveredRelics: string[];
   lexiconRead: string[];
+  unlockedLexicon?: string[];
   playerName: string;
   playTimeSeconds: number;
   walkedDistanceMeters?: number;
