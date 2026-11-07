@@ -316,3 +316,5 @@ export const REFORMATION_LEXICON: LexiconEntry[] = [
     minChapter: 8,
   },
 ];
+
+export const LEXICON = REFORMATION_LEXICON;

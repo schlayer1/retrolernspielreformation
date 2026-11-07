@@ -11,12 +11,13 @@ export class BootScene extends Phaser.Scene {
     this.load.image('ground_a2', '/assets/world/ground_a2.png');
     this.load.image('ground_med_a2', '/assets/world/ground_med_a2.png');
     this.load.image('cliffs_nature', '/assets/world/cliffs_nature.png');
+    this.load.image('cliffs_desert', '/assets/world/cliffs_desert.png');
     this.load.image('Overworld', '/assets/gfx/Overworld.png');
 
     // 2. Main Character Spritesheet (16x32)
-    this.load.spritesheet('character', '/assets/characters/keep_squire.png', {
-      frameWidth: 48,
-      frameHeight: 64,
+    this.load.spritesheet('character', '/assets/gfx/character.png', {
+      frameWidth: 16,
+      frameHeight: 32,
     });
 
     // 3. Keep Characters (48x64)

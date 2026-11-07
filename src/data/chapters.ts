@@ -29,6 +29,13 @@ export interface ChapterData {
   relicId?: string;
   stationId?: string;
   successMessage: string;
+  targetInterior?: string;
+  music?: {
+    trackId: string;
+    title: string;
+    style: string;
+    prompt: string;
+  };
 }
 
 export const REFORMATION_CHAPTERS: ChapterData[] = [
@@ -60,6 +67,13 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
     relicId: 'thesen_95',
     stationId: 'station_ablass',
     successMessage: 'Die 95 Thesen hängen am Portal! Das Ringen um die Wahrheit hat begonnen.',
+    targetInterior: 'lutherstube_wittenberg',
+    music: {
+      trackId: 'ref_k01_thesen',
+      title: 'Der Seelenmarkt & die 95 Thesen',
+      style: '16-bit SNES Renaissance Lute & Monastery Choir',
+      prompt: 'Sacred lute and monastic choir',
+    },
   },
   {
     id: 2,
@@ -89,6 +103,13 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
     relicId: 'druckerplatte_cranach',
     stationId: 'station_druckerei',
     successMessage: 'Die Druckerpresse hat vollendet! Hunderte Flugschriften gehen auf Reisen durch das Reich.',
+    targetInterior: 'cranach_werkstatt_druckerei',
+    music: {
+      trackId: 'ref_k02_buchdruck',
+      title: 'Die Werkstatt von Cranach & der Buchdruck',
+      style: '16-bit SNES Renaissance Artisan & Woodwinds',
+      prompt: 'Lively printing workshop',
+    },
   },
   {
     id: 3,
@@ -117,6 +138,13 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
     ],
     stationId: 'station_verhoer',
     successMessage: 'Luther ist unversehrt entkommen! Die Gewissensfrage ist reichsweit entbrannt.',
+    targetInterior: 'schlosskirche_portal',
+    music: {
+      trackId: 'ref_k03_bannbulle',
+      title: 'Bannandrohung & Feuer vor dem Elstertor',
+      style: '16-bit SNES Dramatic Dark Choral',
+      prompt: 'Solemn Latin chant feeling',
+    },
   },
   {
     id: 4,
@@ -144,6 +172,13 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
       'Bereite die geheime Fluchtroute nach Thüringen vor',
     ],
     successMessage: 'Standhaft geblieben! Luther steht unter Reichsacht, doch sein Wort lebt weiter.',
+    targetInterior: 'reichstagssaal_worms',
+    music: {
+      trackId: 'ref_k04_worms',
+      title: 'Hier stehe ich – Der Reichstag zu Worms',
+      style: '16-bit SNES Imperial Fanfare & Regal Organ',
+      prompt: 'Majestic imperial court theme',
+    },
   },
   {
     id: 5,
@@ -173,6 +208,13 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
     relicId: 'septembertestament',
     stationId: 'station_schreibstube',
     successMessage: 'Die Bibel spricht Deutsch! Eine neue Epoche der Bildung bricht an.',
+    targetInterior: 'wartburg_stube',
+    music: {
+      trackId: 'ref_k05_wartburg',
+      title: 'Junker Jörg auf der Wartburg',
+      style: '16-bit SNES Castle Solitude & Folk Lute',
+      prompt: 'Gentle melancholic folk lute',
+    },
   },
   {
     id: 6,
@@ -200,6 +242,13 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
       'Lerne die Bedeutung des evangelischen Pfarrhauses kennen',
     ],
     successMessage: 'Das Schwarze Kloster blüht! Der neue Alltag der Reformation hat feste Wurzeln gefasst.',
+    targetInterior: 'stadtkirche_wittenberg',
+    music: {
+      trackId: 'ref_k06_bildersturm',
+      title: 'Wittenberger Unruhen & Bildersturm',
+      style: '16-bit SNES Suspense & City Agitation',
+      prompt: 'Warning town bells and rapid tempo',
+    },
   },
   {
     id: 7,
@@ -227,6 +276,13 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
       'Reflektiere die Gefahren von Verbitterung und Krieg',
     ],
     successMessage: 'Die Tragödie des Bauernkrieges verstanden. Wahre Freiheit braucht Gerechtigkeit ohne Gewalt.',
+    targetInterior: 'bauernrat_stube',
+    music: {
+      trackId: 'ref_k07_bauernkrieg',
+      title: 'Die Zwölf Artikel & der Bauernkrieg',
+      style: '16-bit SNES Peasant Folk & Gathering Drums',
+      prompt: 'Rustic German peasant folk melody',
+    },
   },
   {
     id: 8,
@@ -256,5 +312,15 @@ export const REFORMATION_CHAPTERS: ChapterData[] = [
     relicId: 'religionsfriede_1555',
     stationId: 'station_quelleninspektor',
     successMessage: 'Meisterleistung! Du hast die Reformation von 1517 bis 1555 meisterhaft dokumentiert.',
+    targetInterior: 'rathaus_friedenssaal',
+    music: {
+      trackId: 'ref_k08_religionsfrieden',
+      title: 'Augsburger Bekenntnis & Religionsfrieden',
+      style: '16-bit SNES Triumphant Sacred Anthem',
+      prompt: 'Triumphant Renaissance chorale',
+    },
   },
 ];
+
+export const CHAPTERS = REFORMATION_CHAPTERS;
+

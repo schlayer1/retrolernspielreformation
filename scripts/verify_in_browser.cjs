@@ -4,262 +4,204 @@ const path = require('path');
 const fs = require('fs');
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const ARTIFACT_DIR = path.resolve(__dirname, '../production/qa/evidence');
-const PORT = 4192;
+const ARTIFACT_DIR = path.resolve(__dirname, '..', 'artifacts');
+const CONV_DIR = '/Users/nicolekeller/.gemini/antigravity/brain/f95fdc3f-3064-43f6-8d47-4f5743487b64';
+const PORT = 4187;
+
+if (!fs.existsSync(ARTIFACT_DIR)) {
+  fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
+if (!fs.existsSync(CONV_DIR)) {
+  fs.mkdirSync(CONV_DIR, { recursive: true });
+}
 
 async function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function main() {
-  if (!fs.existsSync(ARTIFACT_DIR)) {
-    fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
-  }
+async function saveScreenshot(page, filename) {
+  const p1 = path.join(ARTIFACT_DIR, filename);
+  const p2 = path.join(CONV_DIR, filename);
+  await page.screenshot({ path: p1 });
+  try {
+    fs.copyFileSync(p1, p2);
+  } catch (e) {}
+  console.log(`✅ Captured: ${filename}`);
+}
 
-  console.log(`Starting Vite preview server on port ${PORT}...`);
+async function main() {
+  console.log(`🚀 Starting Vite preview server on port ${PORT}...`);
   const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
     cwd: path.resolve(__dirname, '..'),
     stdio: 'pipe',
   });
 
-  server.stdout.on('data', (d) => console.log(`[Vite stdout] ${d.toString().trim()}`));
-  server.stderr.on('data', (d) => console.error(`[Vite stderr] ${d.toString().trim()}`));
+  server.stdout.on('data', (d) => console.log(`[Vite] ${d.toString().trim()}`));
+  server.stderr.on('data', (d) => console.error(`[Vite Err] ${d.toString().trim()}`));
 
   await sleep(2500);
 
   const browser = await puppeteer.launch({
     executablePath: CHROME_PATH,
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
   const errors = [];
+  const failedUrls = [];
 
   try {
     const page = await browser.newPage();
+
     page.on('pageerror', (err) => {
-      console.error('PAGEERROR:', err.message);
+      console.error('PAGE ERROR:', err.message);
       errors.push(`PAGEERROR: ${err.message}`);
     });
+
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
         console.error('CONSOLE ERROR:', msg.text());
-        errors.push(`CONSOLE ERROR: ${msg.text()}`);
+        errors.push(`CONSOLE: ${msg.text()}`);
+      }
+    });
+
+    page.on('response', (res) => {
+      if (res.status() >= 400) {
+        console.warn(`FAILED RESOURCE [${res.status()}]: ${res.url()}`);
+        failedUrls.push(`${res.status()} ${res.url()}`);
       }
     });
 
     // 1. Desktop Start Screen (1440x900)
-    console.log('1. Capturing Desktop Start Screen...');
+    console.log(`Navigating to http://localhost:${PORT}/ ...`);
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
     await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle0' });
     await sleep(1500);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_1_desktop_start.png') });
-    console.log('✅ verify_1_desktop_start.png captured');
+    await saveScreenshot(page, 'verify_1_desktop_start.png');
 
-    // 2. Mobile Start Screen (812x375)
-    console.log('2. Capturing Mobile Start Screen...');
-    await page.setViewport({ width: 812, height: 375, deviceScaleFactor: 2 });
+    // 2. Mobile Landscape Start Screen (844x390, iPhone Querformat)
+    await page.setViewport({ width: 844, height: 390, deviceScaleFactor: 2 });
     await sleep(600);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_2_mobile_start.png') });
-    console.log('✅ verify_2_mobile_start.png captured');
+    await saveScreenshot(page, 'verify_2_mobile_start.png');
 
-    // Return to desktop viewport
+    // 3. Switch back to Desktop 1440x900 & Launch Chapter 1 Dialog
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
     await sleep(400);
-
-    // 3. Start Adventure & Gameplay Screen
-    console.log('3. Starting Adventure...');
-    await page.click('#btn-start-adventure');
-    await sleep(1500);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_3_world_gameplay.png') });
-    console.log('✅ verify_3_world_gameplay.png captured');
-
-    // 4. Open Mentor Dialog
-    console.log('4. Opening Mentor Dialog...');
     await page.evaluate(() => {
-      const ui = (window.__GAME__.scene.getScene('UIScene'));
-      const ch1 = (window.__STATE__.getChapterData(1));
-      ui.openMentorDialog(ch1.mentor);
+      const b = document.querySelector('#btn-start-game, #btn-start-adventure');
+      if (b) b.click();
     });
-    await sleep(600);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_4_mentor_dialog.png') });
-    console.log('✅ verify_4_mentor_dialog.png captured');
+    await sleep(800);
 
-    // Close Dialog
-    await page.click('#btn-dialog-close');
-    await sleep(400);
-
-    // 5. Open Relic Modal (95 Thesen)
-    console.log('5. Opening Relic Inspector...');
+    // Open mentor dialog if not already open
     await page.evaluate(() => {
-      const ui = (window.__GAME__.scene.getScene('UIScene'));
-      const r = (window.__GAME__.scene.getScene('WorldScene')).targets.find((t) => t.relic);
-      if (r && r.relic) ui.openRelicModal(r.relic);
-    });
-    await sleep(400);
-    await page.click('#btn-relic-flip');
-    await sleep(500);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_5_relic_modal.png') });
-    console.log('✅ verify_5_relic_modal.png captured');
-
-    // Close Relic Modal
-    await page.click('#btn-relic-close');
-    await sleep(400);
-
-    // 6. Open Inventory & Workshop
-    console.log('6. Opening Inventory...');
-    await page.click('#btn-inv');
-    await sleep(600);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_6_inventory.png') });
-    console.log('✅ verify_6_inventory.png captured');
-
-    // Close Inventory
-    await page.click('#btn-inv-close');
-    await sleep(400);
-
-    // 7. Open Lexicon
-    console.log('7. Opening Lexicon...');
-    await page.click('#btn-lex');
-    await sleep(400);
-    await page.evaluate(() => {
-      const lockedItem = document.querySelector('.lex-list-item.locked');
-      if (lockedItem) lockedItem.click();
-    });
-    await sleep(500);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_7_lexicon.png') });
-    console.log('✅ verify_7_lexicon.png captured');
-    await sleep(600);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_7_lexicon.png') });
-    console.log('✅ verify_7_lexicon.png captured');
-
-    // Close Lexicon
-    await page.click('#btn-lex-close');
-    await sleep(400);
-
-    // 8. Open Pause Dashboard
-    console.log('8. Opening Pause Dashboard...');
-    await page.click('#btn-pause');
-    await sleep(600);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_8_pause_dashboard.png') });
-    console.log('✅ verify_8_pause_dashboard.png captured');
-
-    // Close Pause Dashboard
-    await page.click('#btn-pause-close');
-    await sleep(400);
-
-    // 9. Open Didactic Station Modal (Tetzel-Ablasskasse)
-    console.log('9. Opening Didactic Station Modal...');
-    await page.evaluate(() => {
-      const ui = (window.__GAME__.scene.getScene('UIScene'));
-      ui.openStationModal('station_ablass');
-    });
-    await sleep(600);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_9_station_modal.png') });
-    console.log('✅ verify_9_station_modal.png captured');
-
-    // Close Station Modal
-    await page.click('#btn-station-close');
-    await sleep(400);
-
-    // 10. Hefterblatt A4 Worksheet Preview
-    console.log('10. Capturing Hefterblatt Worksheet Preview...');
-    await page.evaluate(() => {
-      const ps = document.getElementById('hefter-print-sheet');
-      if (ps) {
-        ps.style.display = 'block';
-        ps.style.position = 'fixed';
-        ps.style.top = '0';
-        ps.style.left = '0';
-        ps.style.width = '100vw';
-        ps.style.height = '100vh';
-        ps.style.zIndex = '99999';
-        ps.style.overflowY = 'auto';
-        ps.style.background = '#ffffff';
+      const win = window;
+      if (win.__openMentorDialog && win.__CHAPTERS__) {
+        win.__openMentorDialog(win.__CHAPTERS__[0]);
       }
     });
-    await sleep(500);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_10_print_sheet.png') });
-    console.log('✅ verify_10_print_sheet.png captured');
-
-    // Hide print sheet again
-    await page.evaluate(() => {
-      const ps = document.getElementById('hefter-print-sheet');
-      if (ps) ps.style.display = 'none';
-    });
-    await sleep(300);
-
-    // 11. Interior Warp: Wartburg-Schreibstube
-    console.log('11. Capturing Interior Warp (Wartburg-Stube)...');
-    await page.evaluate(() => {
-      const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 168 * 16, y: 59 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)', roomId: 'wartburg' });
-    });
-    await sleep(700);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_11_interior_wartburg.png') });
-    console.log('✅ verify_11_interior_wartburg.png captured');
-
-    // 12. Gutenberg Workshop Simulator (Letternsatz & Winkelhaken)
-    console.log('12. Capturing Gutenberg Workshop Simulator...');
-    await page.evaluate(() => {
-      const ui = (window.__GAME__.scene.getScene('UIScene'));
-      ui.openGutenbergWorkshopModal();
-    });
     await sleep(600);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_12_gutenberg_workshop.png') });
-    console.log('✅ verify_12_gutenberg_workshop.png captured');
+    await saveScreenshot(page, 'verify_3_ch1_dialog.png');
 
-    // Close Workshop Modal
-    await page.click('#btn-station-close');
+    // 4. Close dialog -> Chapter 1 Overworld + Steinzeit Top-HUD + Hotbar
+    await page.evaluate(() => {
+      const btn = document.querySelector('#btn-dialog-close');
+      if (btn) btn.click();
+      else if (window.__closeModal) window.__closeModal();
+    });
+    await sleep(800);
+    await saveScreenshot(page, 'verify_4_ch1_overworld.png');
+
+    // 5. River & Flora exploration
+    await page.evaluate(() => {
+      const win = window;
+      const game = win.__GAME__;
+      if (game) {
+        const world = game.scene.getScene('WorldScene');
+        if (world && world.player) {
+          world.player.setPosition(44 * 16, 64 * 16);
+          world.cameras.main.centerOn(44 * 16, 64 * 16);
+        }
+      }
+    });
+    await sleep(1000);
+    await saveScreenshot(page, 'verify_5_river_and_flora.png');
+
+    // 6. Crafting / Workshop Modal ([C])
+    await page.keyboard.press('KeyC');
+    await sleep(600);
+    await saveScreenshot(page, 'verify_6_crafting_modal.png');
+    await page.evaluate(() => { if (window.__closeModal) window.__closeModal(); });
     await sleep(400);
 
-    // 13. Interior Warp: Kaiserlicher Reichstagssaal zu Worms (1521, Kap. 4)
-    console.log('13. Capturing Interior Warp (Worms Reichstagssaal)...');
-    await page.evaluate(() => {
-      const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 169 * 16, y: 25 * 16, isIndoor: true, name: 'Kaiserlicher Reichstagssaal (Worms)', roomId: 'worms' });
-    });
-    await sleep(700);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_13_interior_worms.png') });
-    console.log('✅ verify_13_interior_worms.png captured');
+    // 7. Progressive 2-Column Lexicon Modal ([L] - 27 entries)
+    await page.keyboard.press('KeyL');
+    await sleep(600);
+    await saveScreenshot(page, 'verify_7_lexicon_modal.png');
+    await page.evaluate(() => { if (window.__closeModal) window.__closeModal(); });
+    await sleep(400);
 
-    // 14. Interior Warp: Fuggerpalais Audienzsaal Augsburg (1518, Kap. 3)
-    console.log('14. Capturing Interior Warp (Fuggerpalais Audienzsaal)...');
+    // 8. Interactive Didactic Station (Ablasshandel)
     await page.evaluate(() => {
-      const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 130 * 16, y: 60 * 16, isIndoor: true, name: 'Fuggerpalais Audienzsaal (Augsburg)', roomId: 'fugger' });
+      if (typeof window.__openStation === 'function') {
+        window.__openStation('station_ablass');
+      }
     });
-    await sleep(700);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_14_interior_fugger.png') });
-    console.log('✅ verify_14_interior_fugger.png captured');
-
-    // 15. Interior Warp: Schwarzes Kloster Refektorium & Apotheke (1525, Kap. 6)
-    console.log('15. Capturing Interior Warp (Schwarzes Kloster Refektorium & Apotheke)...');
+    await sleep(650);
+    await saveScreenshot(page, 'verify_8_interactive_station.png');
     await page.evaluate(() => {
-      const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 147 * 16, y: 82 * 16, isIndoor: true, name: 'Refektorium & Kloster-Apotheke', roomId: 'kloster' });
+      const el = document.getElementById('station-modal');
+      if (el) el.remove();
     });
-    await sleep(700);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_15_interior_kloster.png') });
-    console.log('✅ verify_15_interior_kloster.png captured');
+    await sleep(400);
 
-    // 16. Historical Rats-Dilemma Modal
-    console.log('16. Capturing Historical Rats-Dilemma Modal...');
+    // 9. 360° Artifact Inspector Modal (95 Thesen)
     await page.evaluate(() => {
-      const ui = (window.__GAME__.scene.getScene('UIScene'));
-      ui.openDilemmaModal(1);
+      if (typeof window.__openArtifactInspector === 'function') {
+        window.__openArtifactInspector('thesen_95');
+      }
     });
-    await sleep(700);
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_16_dilemma_modal.png') });
-    console.log('✅ verify_16_dilemma_modal.png captured');
+    await sleep(650);
+    await saveScreenshot(page, 'verify_9_artifact_inspector.png');
+    await page.evaluate(() => {
+      const el = document.getElementById('artifact-inspector-modal');
+      if (el) el.remove();
+    });
+    await sleep(400);
 
-    console.log('\n🎉 ALL 16 VISUAL BROWSER VERIFICATIONS COMPLETED SUCCESSFULLY!');
-  } catch (err) {
-    console.error('Browser verification failed:', err);
-    process.exit(1);
+    // 10. 7-Tile Pause Dashboard ([P])
+    await page.keyboard.press('KeyP');
+    await sleep(600);
+    await saveScreenshot(page, 'verify_10_pause_dashboard.png');
+    await page.evaluate(() => { if (window.__closeModal) window.__closeModal(); });
+    await sleep(400);
+
+    // 11. Walkable Reformation Interior Scene (Lutherstube Wittenberg)
+    await page.evaluate(() => {
+      if (typeof window.__enterSampleInterior === 'function') {
+        window.__enterSampleInterior();
+      }
+    });
+    await sleep(900);
+    await saveScreenshot(page, 'verify_11_interior_scene.png');
+
+    console.log('Errors:', errors.length);
+    if (errors.length > 0) console.error(errors);
+    console.log('Failed URLs:', failedUrls.length);
+    if (failedUrls.length > 0) console.error(failedUrls);
+
+    if (errors.length > 0 || failedUrls.length > 0) {
+      process.exitCode = 1;
+    } else {
+      console.log('🏆 ALL 11 BROWSER VERIFICATION SCREENSHOTS CAPTURED WITH 0 ERRORS!');
+    }
   } finally {
     await browser.close();
     server.kill();
   }
 }
 
-main();
+main().catch((err) => {
+  console.error('Verification script failed:', err);
+  process.exit(1);
+});

@@ -159,3 +159,5 @@ export const REFORMATION_RELICS: ReformationRelic[] = [
     explanation: 'Das Ius emigrandi (Auswanderungsrecht) war ein wichtiger erster historischer Schritt auf dem langen Weg zur individuellen Religions- und Gewissensfreiheit.',
   },
 ];
+
+export const RELICS = REFORMATION_RELICS;

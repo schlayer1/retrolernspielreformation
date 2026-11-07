@@ -11,6 +11,11 @@ import { ReformationPlayerGender, ReformationPlayerRole } from '../systems/SaveM
 import { TouchControls } from '../ui/TouchControls';
 import { PrintSheet } from '../ui/PrintSheet';
 import { DilemmaModal } from '../ui/DilemmaModal';
+import { StationModal } from '../ui/StationModal';
+import { ArtifactInspectorModal } from '../ui/ArtifactInspectorModal';
+import { TimelineModal } from '../ui/TimelineModal';
+import { WorldScene } from './WorldScene';
+import { musicManager } from '../audio/MusicManager';
 
 export type ModalType =
   | 'none'
@@ -21,6 +26,8 @@ export type ModalType =
   | 'inventory'
   | 'craft'
   | 'lexicon'
+  | 'timeline'
+  | 'certificate'
   | 'pause'
   | 'dilemma';
 
@@ -34,6 +41,10 @@ export class UIScene extends Phaser.Scene {
   private toastContainer!: HTMLDivElement;
   private dilemmaModal = new DilemmaModal();
   private printSheet = new PrintSheet();
+  private stationModal = new StationModal();
+  private artifactInspector = new ArtifactInspectorModal();
+  private timelineModal = new TimelineModal();
+  private lastActionKeyMs = 0;
 
   private selectedLexiconId: string = REFORMATION_LEXICON[0].id;
   private lexiconFilterCategory: string = 'Alle';
@@ -47,6 +58,7 @@ export class UIScene extends Phaser.Scene {
     this.touchControls = new TouchControls((key) => this.handleShortcutKey(key));
     (window as any).__touchControls = this.touchControls;
 
+    this.registerGlobalHooks();
     this.registerKeyboardShortcuts();
 
     gameState.subscribe(() => {
@@ -59,6 +71,24 @@ export class UIScene extends Phaser.Scene {
     this.openStartScreen();
   }
 
+  private registerGlobalHooks(): void {
+    const win = window as any;
+    win.__REF_UI__ = this;
+    win.__isModalOpen = () => this.activeModal !== 'none';
+    win.__openMentorDialog = (mentorOrCh: any) => {
+      const cur = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter) || REFORMATION_CHAPTERS[0];
+      this.openMentorDialog(cur.mentor);
+    };
+    win.__openStation = (id: string) => this.openStation(id);
+    win.__openArtifactInspector = (relIdOrObj: any) => this.openArtifactInspector(relIdOrObj);
+    win.__openTimeline = () => this.openTimelineModal();
+    win.__triggerPrintSheet = () => this.triggerDiplomPrint();
+    win.__printHefterSheet = () => this.triggerDiplomPrint();
+    win.__showToast = (msg: string) => this.showToast(msg);
+    win.__closeModal = () => this.closeModal();
+    win.__eatFood = () => this.eatFood();
+  }
+
   private initDOMStructure(): void {
     this.uiRoot = document.getElementById('ui-layer') as HTMLDivElement;
     if (!this.uiRoot) {
@@ -67,8 +97,8 @@ export class UIScene extends Phaser.Scene {
       document.body.appendChild(this.uiRoot);
     }
     this.uiRoot.innerHTML = `
-      <div id="hud-top-bar" class="hud-top-bar"></div>
-      <div id="quest-tracker-box" class="quest-tracker-box"></div>
+      <div id="hud-top-bar" class="hud-top"></div>
+      <div id="quest-tracker-box" class="hud-bottom"></div>
       <div id="modal-overlay" class="modal-overlay" style="display: none;"></div>
       <div id="toast-container" class="toast-container"></div>
     `;
@@ -81,164 +111,563 @@ export class UIScene extends Phaser.Scene {
 
   private registerKeyboardShortcuts(): void {
     window.addEventListener('keydown', (e) => {
-      if (this.activeModal !== 'none' && this.activeModal !== 'start') {
-        if (e.key === 'Escape') {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      const key = e.key.toUpperCase();
+
+      if (e.key === 'Escape') {
+        if (this.activeModal !== 'none' && this.activeModal !== 'start') {
           this.closeModal();
+        } else if (this.activeModal === 'none') {
+          this.openPauseDashboard();
         }
         return;
       }
-      this.handleShortcutKey(e.key.toUpperCase());
+
+      if (this.activeModal === 'start') return;
+
+      if (key === 'E' || e.code === 'Space' || e.key === 'Enter') {
+        const now = Date.now();
+        if (now - this.lastActionKeyMs < 160) return;
+        this.lastActionKeyMs = now;
+
+        if (this.activeModal === 'dialog') {
+          e.preventDefault();
+          this.closeModal();
+          return;
+        }
+        if (this.activeModal === 'none') {
+          e.preventDefault();
+          const win = window as any;
+          if (win.__triggerInteraction) {
+            win.__triggerInteraction();
+          }
+          return;
+        }
+      }
+
+      if (['I', 'C', 'H', 'F', 'L', 'Z', 'U', 'P', 'M', 'K'].includes(key)) {
+        this.handleShortcutKey(key);
+      }
     });
   }
 
-  private handleShortcutKey(key: string): void {
+  public handleShortcutKey(key: string): void {
     if (key === 'ESCAPE' || key === 'ESC') {
       if (this.activeModal !== 'none') this.closeModal();
       else this.openPauseDashboard();
-    } else if (key === 'I') {
+      return;
+    }
+    sound.click();
+    if (key === 'M') {
+      const isMuted = sound.toggleMute();
+      this.showToast(isMuted ? '🔇 Ton stummgeschaltet' : '🔊 Ton aktiv');
+      this.renderHUD();
+      return;
+    }
+    if (key === 'F') {
+      this.eatFood();
+      return;
+    }
+    if (key === 'P') {
+      if (this.activeModal === 'pause') this.closeModal();
+      else this.openPauseDashboard();
+      return;
+    }
+    if (key === 'I') {
       if (this.activeModal === 'inventory') this.closeModal();
       else this.openInventory();
-    } else if (key === 'L') {
+      return;
+    }
+    if (key === 'C') {
+      if (this.activeModal === 'craft') this.closeModal();
+      else this.openGutenbergWorkshopModal();
+      return;
+    }
+    if (key === 'H') {
+      if (this.activeModal === 'dilemma') this.closeModal();
+      else this.openDilemmaModal();
+      return;
+    }
+    if (key === 'L') {
       if (this.activeModal === 'lexicon') this.closeModal();
       else this.openLexiconModal();
-    } else if (key === 'U') {
-      this.printSheet.print();
+      return;
+    }
+    if (key === 'Z') {
+      if (this.activeModal === 'timeline') this.closeModal();
+      else this.openTimelineModal();
+      return;
+    }
+    if (key === 'U') {
+      if (this.activeModal === 'certificate') this.closeModal();
+      else this.openCertificateModal();
+      return;
+    }
+    if (key === 'K') {
+      if (this.activeModal === 'start') this.closeModal();
+      else this.openStartScreen();
+      return;
+    }
+  }
+
+  public eatFood(): void {
+    const msg = gameState.eat();
+    this.showToast(msg);
+    this.renderHUD();
+  }
+
+  public triggerDiplomPrint(): void {
+    gameState.storyFlags['opened_certificate'] = true;
+    gameState.notify();
+    this.printSheet.print();
+  }
+
+  public openStation(stationId: string): void {
+    const st = REFORMATION_STATIONS.find((s) => s.id === stationId);
+    if (!st) return;
+    this.closeModal();
+    this.stationModal.open(st, () => {
+      this.showToast(`🏛️ Station gemeistert: ${st.name}! (+100 Punkte)`);
+      sound.playSuccess();
+      this.renderHUD();
+    });
+  }
+
+  public openArtifactInspector(relicIdOrObj: string | ReformationRelic): void {
+    const id = typeof relicIdOrObj === 'string' ? relicIdOrObj : relicIdOrObj?.id;
+    const rel = REFORMATION_RELICS.find((r) => r.id === id) || REFORMATION_RELICS[0];
+    if (!rel) return;
+    this.closeModal();
+    this.artifactInspector.open(rel, () => {
+      this.renderHUD();
+    });
+  }
+
+  public openTimelineModal(): void {
+    this.closeModal();
+    this.timelineModal.open(() => {
+      this.renderHUD();
+    });
+  }
+
+  public closeModal(): void {
+    this.activeModal = 'none';
+    this.modalOverlay.style.display = 'none';
+    this.dilemmaModal.close();
+    this.stationModal.close();
+    this.artifactInspector.close();
+    this.timelineModal.close();
+    this.touchControls.setVisible(true);
+
+    const world = this.scene.get('WorldScene') as WorldScene;
+    if (world && world.resetDialogFocus) {
+      world.resetDialogFocus();
     }
   }
 
   public renderHUD(): void {
     if (!this.hudHeader) return;
-    const curCh = gameState.getChapterData();
-    const isMuted = sound.isMuted();
+    this.hudHeader.style.display = this.activeModal === 'start' ? 'none' : 'flex';
+    if (this.questBox) {
+      this.questBox.style.display = this.activeModal === 'start' ? 'none' : 'flex';
+    }
+    if (this.touchControls) {
+      this.touchControls.setVisible(this.activeModal === 'none');
+    }
+
+    const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter) || REFORMATION_CHAPTERS[0];
+    const roleDef = REFORMATION_ROLES.find((r) => r.id === gameState.role) || REFORMATION_ROLES[0];
+    const stateObj = gameState.chapterObjectives[curCh.number] || [false, false, false, false];
+    const allDone = gameState.checkQuest(curCh.number);
+
+    const taskText = allDone
+      ? `Alle Aufgaben gemeistert! Sprich mit ${curCh.mentor.name} für die theologische Disputation (E).`
+      : curCh.primaryObjective;
+
+    const knowPct = Math.max(0, Math.min(100, Math.round(gameState.knowledge)));
+    const couragePct = Math.max(0, Math.min(100, Math.round(gameState.courage)));
+    const pietyPct = Math.max(0, Math.min(100, Math.round(gameState.piety)));
 
     this.hudHeader.innerHTML = `
-      <div class="hud-left">
-        <span class="hud-ch-badge">KAPITEL ${curCh.number}: ${curCh.year}</span>
-        <span class="hud-player-badge">📜 ${gameState.playerName} (${gameState.getChronistenRang().title})</span>
-        <span class="hud-pts-badge">⭐ ${gameState.getEpochenPunkte()} Pkt</span>
+      <div class="hud-card" id="hud-quest-box">
+        <div id="hud-chapter-title">
+          📜 Kap. ${curCh.number}: ${curCh.title} (${curCh.year}) · ${gameState.playerName} (${roleDef.name})
+        </div>
+        <div id="hud-quest">
+          <div style="margin-bottom:4px;">📋 <strong>Aufgabe:</strong> ${taskText}</div>
+          <div class="quest-steps-list" style="margin:4px 0;">
+            ${curCh.objectives
+              .map(
+                (obj, idx) => `
+              <div class="quest-step-item ${stateObj[idx] ? 'step-done' : ''}" style="display:flex;align-items:center;gap:5px;font-size:11px;color:${stateObj[idx] ? '#86efac' : '#fef3c7'};">
+                <span>${stateObj[idx] ? '✅' : '⬜'}</span>
+                <span style="${stateObj[idx] ? 'text-decoration:line-through;opacity:0.85;' : ''}">${obj}</span>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:4px;">
+            <span style="font-size:10.5px;color:${allDone ? '#4ade80' : '#fde68a'};">
+              ${allDone ? `✨ Bereit für Disputation bei ${curCh.mentor.name} [E]!` : `💡 Mentor: ${curCh.mentor.name} [E]`}
+            </span>
+            <button id="btn-open-mentor-dialog" class="hud-btn" style="padding:2px 7px;font-size:10.5px;">
+              💬 ${curCh.mentor.name}
+            </button>
+          </div>
+        </div>
+        <div id="hud-compass" class="hud-compass-line">${gameState.compassText || '🧭 Wegweiser wird berechnet...'}</div>
       </div>
+
       <div class="hud-right">
-        <button id="btn-audio" class="hud-btn" title="Ton an/aus">${isMuted ? '🔇' : '🎵'}</button>
-        <button id="btn-inv" class="hud-btn" title="Chronik-Tasche [I]">🎒 Tasche</button>
-        <button id="btn-lex" class="hud-btn" title="Geschichtslexikon [L]">📖 Lexikon</button>
-        <button id="btn-pause" class="hud-btn" title="Pause / Chronik [ESC]">⚙️ Menü</button>
+        <div class="hud-card" id="hud-bars-card">
+          <div class="bar-row" title="Wissen & theologische Gelehrsamkeit">
+            <span>📖 Wissen</span>
+            <div class="bar-track"><div class="bar-fill yellow" id="bar-knowledge" style="width:${knowPct}%"></div></div>
+            <span id="val-knowledge">${knowPct}%</span>
+          </div>
+          <div class="bar-row" title="Mut für Gewissen & freies Wort">
+            <span>🛡️ Mut</span>
+            <div class="bar-track"><div class="bar-fill blue" id="bar-courage" style="width:${couragePct}%"></div></div>
+            <span id="val-courage">${couragePct}%</span>
+          </div>
+          <div class="bar-row" title="Glaube & Frömmigkeit (Sola Fide)">
+            <span>✝️ Glaube</span>
+            <div class="bar-track"><div class="bar-fill orange" id="bar-piety" style="width:${pietyPct}%"></div></div>
+            <span id="val-piety">${pietyPct}%</span>
+          </div>
+          <div class="hud-subinfo">
+            Lexikon: <b id="hud-lex-count">${gameState.unlockedLexicon.size}/27</b> ·
+            🏺 Relikte: <b>${gameState.discoveredRelics.size}/5</b> ·
+            <span id="hud-time-of-day">☀️ Tag</span> ·
+            🎵 Musik: <b id="hud-music-state">${sound.bgmMuted ? 'Aus' : 'An'}</b>
+          </div>
+        </div>
+
+        <div class="hud-btn-row">
+          <button class="hud-btn ${this.activeModal === 'pause' ? 'active' : ''}" id="btn-pause" data-modal="pause" title="Pause-Dashboard [P / ESC]"><span class="key-badge">P</span> ⏸ Pause</button>
+          <button class="hud-btn ${this.activeModal === 'inventory' ? 'active' : ''}" id="btn-bag" data-modal="inventory" title="Beutel & Relikte [I]"><span class="key-badge">I</span> 🎒 Beutel</button>
+          <button class="hud-btn ${this.activeModal === 'craft' ? 'active' : ''}" id="btn-craft" data-modal="craft" title="Gutenberg-Werkstatt [C]"><span class="key-badge">C</span> Werkstatt</button>
+          <button class="hud-btn ${this.activeModal === 'dilemma' ? 'active' : ''}" id="btn-dilemma" data-modal="dilemma" title="Gewissensfrage [H]"><span class="key-badge">H</span> Gewissen</button>
+          <button class="hud-btn ${this.activeModal === 'lexicon' ? 'active' : ''}" id="btn-lexicon" data-modal="lexicon" title="Reformations-Lexikon (27 Begriffe) [L]"><span class="key-badge">L</span> Lexikon</button>
+          <button class="hud-btn ${this.activeModal === 'timeline' ? 'active' : ''}" id="btn-timeline" data-modal="timeline" title="Epochen-Zeitstrahl [Z]"><span class="key-badge">Z</span> Zeitstrahl</button>
+          <button class="hud-btn" id="btn-eat" data-action="eat" title="Proviant essen [F]"><span class="key-badge">F</span> Essen</button>
+          <button class="hud-btn" id="btn-music" data-action="music" title="Musik an/aus [M]"><span class="key-badge">M</span> 🎵 Musik</button>
+          <button class="hud-btn" id="btn-epoch" data-modal="start" title="Kapitel wählen [K]"><span class="key-badge">K</span> Epoche</button>
+          <button class="hud-btn ${this.activeModal === 'certificate' ? 'active' : ''}" id="btn-cert" data-modal="certificate" title="Chronisten-Diplom [U]"><span class="key-badge">U</span> Diplom</button>
+        </div>
       </div>
     `;
 
-    document.getElementById('btn-audio')?.addEventListener('click', () => {
-      sound.toggleMute();
-      this.renderHUD();
+    const mentorBtn = this.hudHeader.querySelector('#btn-open-mentor-dialog');
+    if (mentorBtn) {
+      mentorBtn.addEventListener('click', () => {
+        sound.click();
+        this.openMentorDialog(curCh.mentor);
+      });
+    }
+
+    this.hudHeader.querySelectorAll('.hud-btn').forEach((btn) => {
+      if (btn.id === 'btn-open-mentor-dialog') return;
+      btn.addEventListener('click', () => {
+        const action = btn.getAttribute('data-action');
+        if (action === 'eat') {
+          this.eatFood();
+          return;
+        }
+        if (action === 'music') {
+          this.handleShortcutKey('M');
+          return;
+        }
+        const m = btn.getAttribute('data-modal') as ModalType;
+        if (m) {
+          if (m === 'start') {
+            this.openStartScreen();
+          } else if (m === 'pause') {
+            this.openPauseDashboard();
+          } else if (m === 'inventory') {
+            this.openInventory();
+          } else if (m === 'craft') {
+            this.openGutenbergWorkshopModal();
+          } else if (m === 'dilemma') {
+            this.openDilemmaModal();
+          } else if (m === 'lexicon') {
+            this.openLexiconModal();
+          } else if (m === 'timeline') {
+            this.openTimelineModal();
+          } else if (m === 'certificate') {
+            this.openCertificateModal();
+          }
+        }
+      });
     });
-    document.getElementById('btn-inv')?.addEventListener('click', () => this.openInventory());
-    document.getElementById('btn-lex')?.addEventListener('click', () => this.openLexiconModal());
-    document.getElementById('btn-pause')?.addEventListener('click', () => this.openPauseDashboard());
   }
 
   public renderQuestTracker(): void {
     if (!this.questBox) return;
-    const curCh = gameState.getChapterData();
-    const objectives = curCh.objectives;
-    const stateObj = gameState.chapterObjectives[curCh.number] || [false, false, false, false];
+    this.questBox.style.display = this.activeModal === 'start' ? 'none' : 'flex';
+
+    const hotbarItems: ReformationItemId[] = [
+      'pergament',
+      'bleilettern',
+      'druckerschwaerze',
+      'holzschnitt_platte',
+      'flugschrift',
+      'ablassbrief',
+      'brot_fladen',
+      'tinte_feder',
+    ];
+
+    const slotsHtml = hotbarItems
+      .map((itemId, idx) => {
+        const def = REFORMATION_ITEMS[itemId];
+        const qty = gameState.inventory[itemId] || 0;
+        return `
+          <div class="hotbar-slot ${qty > 0 ? 'has-item' : ''}" data-slot-item="${itemId}" title="${def ? def.name : itemId} (${qty} im Beutel)">
+            <img src="${def ? def.icon : '/assets/icons/relic_marker_glow.png'}" alt="${def ? def.name : itemId}" style="opacity:${qty > 0 ? '1' : '0.32'}" />
+            <span class="count">${qty > 0 ? qty : idx + 1}</span>
+          </div>
+        `;
+      })
+      .join('');
+
+    const relicSlotsHtml = REFORMATION_RELICS.map((r) => {
+      const found = gameState.discoveredRelics.has(r.id);
+      return `
+        <div class="hotbar-slot relic-slot ${found ? 'has-item' : ''}" data-slot-relic="${r.id}" title="${found ? r.name : `Unentdecktes Relikt`}">
+          <img src="${r.icon}" alt="${r.name}" style="opacity:${found ? '1' : '0.25'}" />
+          <span class="count">${found ? '★' : '🔒'}</span>
+        </div>
+      `;
+    }).join('');
 
     this.questBox.innerHTML = `
-      <div class="quest-box-inner">
-        <div class="quest-header">
-          <span class="quest-title">KAPITEL ${curCh.number}: ${curCh.title}</span>
-          <span class="quest-year">${curCh.year}</span>
+      <div id="hud-hint">WASD / Pfeiltasten = Bewegen · E = Interagieren · F = Essen · C = Werkstatt · I = Beutel · P = Pause</div>
+      <div class="hud-bottom-row">
+        <div id="hud-hotbar">
+          ${slotsHtml}
+          ${relicSlotsHtml}
         </div>
-        <div class="quest-primary">${curCh.primaryObjective}</div>
-        <div class="quest-checklist">
-          ${objectives
-            .map(
-              (obj, idx) => `
-            <div class="quest-item ${stateObj[idx] ? 'completed' : ''}">
-              <span class="check-box">${stateObj[idx] ? '✓' : '○'}</span>
-              <span class="obj-text">${obj}</span>
-            </div>
-          `
-            )
-            .join('')}
-        </div>
-        <div id="hud-compass" class="hud-compass-box">
-          ${gameState.compassText || '🧭 <strong>Ziel:</strong> Folge dem goldenen Wegweiser'}
-        </div>
-        <div class="quest-footer">
-          <span>Ort: <strong>${curCh.location}</strong></span>
-        </div>
+        <button class="hud-btn" id="btn-hotbar-bag" title="Beutel öffnen [I]">
+          <span class="key-badge">I</span> 🎒 Beutel
+        </button>
       </div>
     `;
+
+    this.questBox.querySelector('#btn-hotbar-bag')?.addEventListener('click', () => {
+      this.openInventory();
+    });
+
+    this.questBox.querySelectorAll('[data-slot-item]').forEach((el) => {
+      el.addEventListener('click', () => {
+        this.openInventory();
+      });
+    });
+
+    this.questBox.querySelectorAll('[data-slot-relic]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const relId = el.getAttribute('data-slot-relic');
+        if (relId) this.openArtifactInspector(relId);
+      });
+    });
   }
 
   public openStartScreen(): void {
     this.activeModal = 'start';
+    this.touchControls.setVisible(false);
     this.modalOverlay.style.display = 'flex';
 
     this.modalOverlay.innerHTML = `
-      <div class="start-screen-card">
-        <div class="parchment-border-outer">
-          <div class="start-header">
-            <span class="sub-lead">16-Bit Geschichtslernspiel • Staatliche Regelschule Heimbürgeschule Kahla</span>
-            <h1 class="main-title">Die Reformation</h1>
-            <h2 class="sub-title">Glaube, Macht & die Medienrevolution (1517–1555)</h2>
+      <div class="startscreen-container">
+        <!-- Header -->
+        <div class="startscreen-header">
+          <div class="st-title-line">
+            <span class="st-icon">📜</span>
+            <h1>DIE REFORMATION: GLAUBE, MACHT & MEDIENREVOLUTION</h1>
+            <span class="st-era-tag">Klasse 7 / 8 · 1517 – 1555 n. Chr.</span>
           </div>
+          <p class="st-subtitle">Erlebe Martin Luthers Thesenanschlag, den Wormser Reichstag, die Wartburg-Bibelübersetzung und die Buchdruckkunst</p>
+        </div>
 
-          <div class="start-intro-text">
-            Wittenberg im Herbst 1517: Der Dominikanermönch Johann Tetzel zieht durchs Land, um Ablassbriefe zu verkaufen.
-            Als junger Gehilfe im Cranach-Hof wirst du Zeuge der ersten Medienrevolution der Geschichte.
-            Drucke Flugblätter, begleite Martin Luther nach Worms, übersetze die Bibel auf der Wartburg und gestalte den Augsburger Religionsfrieden!
+        <!-- Hero Showcase Box (Alle 8 Kapitel) -->
+        <div class="hero-showcase-box">
+          <div class="showcase-title">✨ 8 ABENTEUER-KAPITEL DER REFORMATION</div>
+          <div class="showcase-grid-8">
+            ${REFORMATION_CHAPTERS.map(
+              (c) => `
+              <div class="sc-card ${c.number === gameState.chapter ? 'active' : ''}" onclick="window.__startSelectCh(${c.number})">
+                <div class="sc-badge">K${c.number}</div>
+                <div class="sc-name">${c.title}</div>
+                <div class="sc-mentor">${c.mentor.role}</div>
+              </div>
+            `
+            ).join('')}
           </div>
+        </div>
 
-          <div class="start-form-section">
-            <div class="form-row">
-              <label>Name des Chronisten / Schülers:</label>
-              <input type="text" id="input-player-name" value="${gameState.playerName}" maxlength="18" class="start-input" />
+        <!-- Setup Form -->
+        <div class="startscreen-form">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>1. Dein Name:</label>
+              <input type="text" id="start-player-name" value="${gameState.playerName}" maxlength="18" />
             </div>
-
-            <div class="form-row">
-              <label>Rolle & Schwerpunkt:</label>
-              <div class="role-selection-grid">
-                ${REFORMATION_ROLES.map(
-                  (r) => `
-                  <div class="role-card ${r.id === gameState.role ? 'selected' : ''}" data-role="${r.id}">
-                    <div class="role-card-header">
-                      <strong>${r.name}</strong>
-                    </div>
-                    <p class="role-desc">${r.description}</p>
-                    <div class="role-bonus">${r.bonusText}</div>
-                  </div>
-                `
-                ).join('')}
+            <div class="form-group">
+              <label>2. Figur wählen:</label>
+              <div class="gender-btn-group">
+                <button class="role-btn ${gameState.gender === 'male' ? 'active' : ''}" id="btn-gender-male">
+                  <img src="/assets/characters/keep_squire.png" style="width:20px;height:40px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
+                  👦 Lucas (Schriftsetzer)
+                </button>
+                <button class="role-btn ${gameState.gender === 'female' ? 'active' : ''}" id="btn-gender-female">
+                  <img src="/assets/characters/keep_peasant_f.png" style="width:20px;height:40px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
+                  👧 Katharina (Kanzleigehilfin)
+                </button>
               </div>
             </div>
           </div>
 
-          <div class="start-actions">
-            <button id="btn-start-adventure" class="btn-primary-large">Abenteuer in Wittenberg beginnen ➔</button>
+          <div class="form-group">
+            <label>3. Deine historische Herkunft & Begabung (Rolle wählen):</label>
+            <div class="roles-selection-grid">
+              ${REFORMATION_ROLES.map(
+                (r) => `
+                <div class="role-card ${gameState.role === r.id ? 'active' : ''}" data-role="${r.id}">
+                  <div class="role-head">
+                    <img src="${r.icon}" class="role-icon" />
+                    <strong>${r.name}</strong>
+                  </div>
+                  <p class="role-desc">${r.description}</p>
+                  <div class="role-bonus">${r.bonusText}</div>
+                </div>
+              `
+              ).join('')}
+            </div>
           </div>
+
+          <div class="form-row code-restore-row">
+            <div class="form-group flex-1">
+              <label>📝 Hefter-Kurzcode vorhanden? (Stunde fortsetzen):</label>
+              <div class="code-input-wrap">
+                <input type="text" id="start-hefter-code" placeholder="z. B. REF-LUC-1517" />
+                <button class="btn-sub" id="btn-load-hefter-code">Code laden</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="startscreen-footer">
+          <div class="controls-hint">
+            🎮 <strong>Steuerung:</strong> WASD / Pfeiltasten = Bewegen · [E] = Interagieren · [I] = Beutel · [C] = Werkstatt · [P] = Menü
+          </div>
+          <button class="start-btn-launch" id="btn-start-game">🚀 Reformation starten!</button>
         </div>
       </div>
     `;
 
-    // Role selection click
-    const cards = this.modalOverlay.querySelectorAll('.role-card');
-    cards.forEach((card) => {
-      card.addEventListener('click', () => {
-        cards.forEach((c) => c.classList.remove('selected'));
-        card.classList.add('selected');
-        gameState.role = card.getAttribute('data-role') as ReformationPlayerRole;
-        sound.click();
+    // Event Bindings
+    const nameInput = document.getElementById('start-player-name') as HTMLInputElement;
+    nameInput?.addEventListener('input', () => {
+      gameState.playerName = nameInput.value.trim() || 'Lucas';
+    });
+
+    const btnMale = document.getElementById('btn-gender-male');
+    const btnFemale = document.getElementById('btn-gender-female');
+    btnMale?.addEventListener('click', () => {
+      gameState.gender = 'male';
+      if (!nameInput.value || nameInput.value === 'Katharina') {
+        nameInput.value = 'Lucas';
+        gameState.playerName = 'Lucas';
+      }
+      btnMale.classList.add('active');
+      btnFemale?.classList.remove('active');
+    });
+    btnFemale?.addEventListener('click', () => {
+      gameState.gender = 'female';
+      if (!nameInput.value || nameInput.value === 'Lucas') {
+        nameInput.value = 'Katharina';
+        gameState.playerName = 'Katharina';
+      }
+      btnFemale.classList.add('active');
+      btnMale?.classList.remove('active');
+    });
+
+    // Roles selection
+    this.modalOverlay.querySelectorAll('.role-card').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        const role = (e.currentTarget as HTMLElement).dataset.role as ReformationPlayerRole;
+        gameState.role = role;
+        this.modalOverlay.querySelectorAll('.role-card').forEach((c) => c.classList.remove('active'));
+        (e.currentTarget as HTMLElement).classList.add('active');
       });
     });
 
-    document.getElementById('btn-start-adventure')?.addEventListener('click', () => {
-      const input = document.getElementById('input-player-name') as HTMLInputElement;
-      if (input && input.value.trim()) {
-        gameState.playerName = input.value.trim();
+    // Hefter Code Load
+    document.getElementById('btn-load-hefter-code')?.addEventListener('click', () => {
+      const codeInput = document.getElementById('start-hefter-code') as HTMLInputElement;
+      if (codeInput && gameState.loadFromHefterCode(codeInput.value)) {
+        sound.success();
+        this.showToast('✅ Hefter-Code erfolgreich geladen!');
+        this.openStartScreen();
+      } else {
+        sound.click();
+        this.showToast('❌ Ungültiger Hefter-Code. Bitte prüfen!');
       }
-      sound.success();
-      this.closeModal();
-      this.showToast(`Willkommen in Wittenberg, ${gameState.playerName}!`);
     });
+
+    // Chapter Direct Select Helper
+    (window as any).__startSelectCh = (chId: number) => {
+      gameState.selectStartChapter(chId);
+      this.openStartScreen();
+    };
+
+    // Launch Game
+    const startLaunch = () => {
+      sound.door();
+      this.closeModal();
+      musicManager.playChapterTrack(gameState.chapter);
+    };
+
+    document.getElementById('btn-start-game')?.addEventListener('click', startLaunch);
+    document.getElementById('btn-start-adventure')?.addEventListener('click', startLaunch);
+  }
+
+  public openCertificateModal(): void {
+    this.activeModal = 'certificate';
+    gameState.storyFlags['opened_certificate'] = true;
+    gameState.notify();
+    this.touchControls.setVisible(false);
+    this.modalOverlay.style.display = 'flex';
+
+    const rang = gameState.getChronistenRang();
+
+    this.modalOverlay.innerHTML = `
+      <div class="modal-card certificate-card">
+        <div class="cert-border">
+          <div class="cert-seal">📜</div>
+          <h1>CHRONISTEN-DIPLOM</h1>
+          <h2>DER REFORMATION & MEDIENREVOLUTION</h2>
+          <p class="cert-salute">Hiermit wird feierlich beurkundet, dass</p>
+          <div class="cert-name">${gameState.playerName}</div>
+          <p class="cert-text">
+            die 95 Thesen Martin Luthers, die Kunst des Buchdrucks und den Gang der Kirchenerneuerung
+            bis zum Augsburger Religionsfrieden 1555 mit herausragendem Scharfsinn erforscht hat.
+          </p>
+          <div class="cert-rank-box">
+            <span>Verliehener Rang:</span>
+            <strong>${rang.title} (${rang.tier}-Stufe)</strong>
+          </div>
+          <div class="cert-footer">
+            <span>Hefter-Code: <strong>${gameState.generateHefterCode()}</strong></span>
+            <span>Gez. Lucas Cranach d. Ä. & Philipp Melanchthon</span>
+          </div>
+        </div>
+        <button class="btn-primary mt-3" onclick="window.__printHefterSheet()">🖨️ A4-Hefterblatt drucken</button>
+      </div>
+    `;
   }
 
   public openMentorDialog(mentor: MentorData, onClose?: () => void): void {
@@ -1116,11 +1545,6 @@ export class UIScene extends Phaser.Scene {
       sound.success();
       this.showToast('Spielstand im Browser gespeichert!');
     });
-  }
-
-  public closeModal(): void {
-    this.activeModal = 'none';
-    this.modalOverlay.style.display = 'none';
   }
 
   public showToast(msg: string): void {

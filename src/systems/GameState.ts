@@ -207,6 +207,19 @@ export class GameState {
     return true;
   }
 
+  public eat(): string {
+    const foodItems: ReformationItemId[] = ['brot_fladen'] as any;
+    for (const item of foodItems) {
+      if ((this.inventory[item] || 0) > 0) {
+        this.removeItem(item, 1);
+        this.piety = Math.min(100, this.piety + 10);
+        this.notify();
+        return `🍞 Du stärkst dich mit ${REFORMATION_ITEMS[item]?.name || item}! (+10 Frömmigkeit & Kraft)`;
+      }
+    }
+    return '🍞 Kein Proviant im Beutel! Besorge dir Brote auf dem Wittenberger Markt.';
+  }
+
   public discoverRelic(id: string): void {
     if (!this.discoveredRelics.has(id)) {
       this.discoveredRelics.add(id);
@@ -254,6 +267,27 @@ export class GameState {
       (this.getEpochenPunkte() * 37 + this.discoveredRelics.size * 101) % 9000
     ) + 1000;
     return `REF-${base}-${hash}`;
+  }
+
+  public checkQuest(ch?: number): boolean {
+    const c = ch ?? this.chapter;
+    const objs = this.chapterObjectives[c];
+    if (!objs) return false;
+    return objs.every((o) => o === true);
+  }
+
+  public selectStartChapter(chId: number): void {
+    this.chapter = Math.max(1, Math.min(8, chId));
+    this.notify();
+  }
+
+  public loadFromHefterCode(code: string): boolean {
+    if (!code || !code.startsWith('REF-')) return false;
+    const parts = code.trim().split('-');
+    if (parts.length < 3) return false;
+    this.playerName = parts[1] || 'Lucas';
+    this.notify();
+    return true;
   }
 
   public autoSave(): void {

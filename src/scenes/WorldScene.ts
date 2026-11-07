@@ -180,6 +180,7 @@ export class WorldScene extends Phaser.Scene {
 
     // 4. Dense Ground Flora Scattering (Outdoors only)
     this.scatterGroundFlora();
+    this.buildPlateauCliffs();
 
     // 5. Place Static Decor & Real Architecture Buildings
     this.placeWorldDecor();
@@ -228,7 +229,7 @@ export class WorldScene extends Phaser.Scene {
     } else {
       this.currentRoom = null;
       this.cameras.main.setBounds(0, 0, 96 * 16, 88 * 16);
-      this.cameras.main.setZoom(2.2);
+      this.cameras.main.setZoom(1.0);
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
       sound.setIndoorAcoustics(false);
     }
@@ -238,6 +239,8 @@ export class WorldScene extends Phaser.Scene {
 
     // 11. Setup Interactive Targets, Doors & Mentors
     this.setupTargets();
+
+    (window as any).__enterSampleInterior = () => this.enterInterior('lutherstube_wittenberg');
     this.initInteractionLabel();
 
     // Expose interaction trigger globally for DOM label click & UI scene
@@ -845,8 +848,18 @@ export class WorldScene extends Phaser.Scene {
       uiScene.openRelicModal(t.relic);
     } else if (t.kind === 'station' && t.stationId) {
       uiScene.openStationModal(t.stationId);
-    } else if (t.kind === 'door' && t.warpTarget) {
-      this.warpTo(t.warpTarget);
+    } else if (t.kind === 'door') {
+      if (t.id.includes('cranach')) {
+        this.enterInterior('cranach_werkstatt_druckerei');
+      } else if (t.id.includes('wartburg')) {
+        this.enterInterior('wartburg_stube');
+      } else if (t.id.includes('worms')) {
+        this.enterInterior('lutherstube_wittenberg');
+      } else if (t.warpTarget) {
+        this.warpTo(t.warpTarget);
+      } else {
+        this.enterInterior('lutherstube_wittenberg');
+      }
     } else if (t.kind === 'resource' && t.nodeDef) {
       gameState.addItem(t.nodeDef.lootItem as ReformationItemId, t.nodeDef.lootCount);
       uiScene.showToast(`+${t.nodeDef.lootCount} ${t.nodeDef.name} gesammelt!`);
@@ -858,7 +871,7 @@ export class WorldScene extends Phaser.Scene {
     const cam = this.cameras.main;
     this.tweens.add({
       targets: cam,
-      zoom: this.currentRoom ? 4.2 : 2.7,
+      zoom: 1.32,
       duration: 450,
       ease: 'Cubic.easeInOut',
     });
@@ -866,12 +879,9 @@ export class WorldScene extends Phaser.Scene {
 
   public resetDialogFocus(): void {
     const cam = this.cameras.main;
-    const targetZoom = this.currentRoom
-      ? Math.max(cam.width / this.currentRoom.w, cam.height / this.currentRoom.h)
-      : 2.2;
     this.tweens.add({
       targets: cam,
-      zoom: targetZoom,
+      zoom: 1.0,
       duration: 400,
       ease: 'Cubic.easeInOut',
     });
@@ -1012,7 +1022,7 @@ export class WorldScene extends Phaser.Scene {
       } else {
         this.currentRoom = null;
         cam.setBounds(0, 0, 96 * 16, 88 * 16);
-        cam.setZoom(2.2);
+        cam.setZoom(1.0);
         cam.startFollow(this.player, true, 0.1, 0.1);
       }
 
@@ -1023,6 +1033,36 @@ export class WorldScene extends Phaser.Scene {
       if (uiScene) {
         uiScene.showToast(`🚪 ${target.name}`);
       }
+    });
+  }
+
+  public buildPlateauCliffs(): void {
+    const stairCols = [32, 68];
+    for (const sx of stairCols) {
+      if (this.textures.get('world_atlas')?.has('stairs_stone')) {
+        this.add
+          .image(sx * 16, 13 * 16, 'world_atlas', 'stairs_stone')
+          .setScale(0.75)
+          .setDepth(4);
+      }
+    }
+    if (this.textures.exists('cliffs_nature')) {
+      for (let tx = 6; tx < 94; tx += 4) {
+        if (tx >= 30 && tx <= 34) continue;
+        if (tx >= 66 && tx <= 70) continue;
+        if (tx >= 11 && tx <= 19) continue;
+        this.add.image(tx * 16, 12 * 16, 'cliffs_nature').setDepth(3);
+      }
+    }
+  }
+
+  public enterInterior(roomId: string = 'lutherstube_wittenberg'): void {
+    sound.door();
+    this.scene.pause('WorldScene');
+    this.scene.launch('InteriorScene', {
+      roomId,
+      returnX: this.player.x,
+      returnY: this.player.y + 16,
     });
   }
 }

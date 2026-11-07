@@ -418,6 +418,18 @@ export class SoundManager {
     osc.start(now);
     osc.stop(now + 0.06);
   }
+
+  public get bgmMuted(): boolean {
+    return this.muted;
+  }
+  public playClick(): void { this.click(); }
+  public playSelect(): void { this.click(); }
+  public playSuccess(): void { this.success(); }
+  public playFanfare(): void { this.success(); }
+  public playCollect(): void { this.questStep(); }
+  public step(surface?: any): void { this.footstep(surface); }
+  public playFootstep(surface?: any): void { this.footstep(surface); }
+  public toggleBGM(): boolean { return this.toggleMute(); }
 }
 
 export const sound = new SoundManager();

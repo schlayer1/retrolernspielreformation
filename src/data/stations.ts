@@ -287,3 +287,5 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     ],
   },
 ];
+
+export const STATIONS = REFORMATION_STATIONS;

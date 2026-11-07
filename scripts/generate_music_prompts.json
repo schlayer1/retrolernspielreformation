@@ -1,0 +1,61 @@
+{
+  "epoch": "Reformation & Renaissance",
+  "tracks": [
+    {
+      "trackId": "ref_k01_thesen",
+      "chapter": 1,
+      "title": "Der Seelenmarkt & die 95 Thesen",
+      "style": "16-bit SNES Renaissance Lute & Monastery Choir",
+      "prompt": "Authentic 16-bit SNES RPG style, sacred lute and solemn monastic polyphonic choir, subtle bells, contemplative German Renaissance atmosphere, peaceful acoustic counterpoint."
+    },
+    {
+      "trackId": "ref_k02_buchdruck",
+      "chapter": 2,
+      "title": "Die Werkstatt von Cranach & der Buchdruck",
+      "style": "16-bit SNES Renaissance Artisan & Woodwinds",
+      "prompt": "16-bit SNES game music, busy lively workshop theme, wooden percussion, renaissance recorders, cheerful harpsichord arpeggios, printing press rhythm."
+    },
+    {
+      "trackId": "ref_k03_bannbulle",
+      "chapter": 3,
+      "title": "Bannandrohung & Feuer vor dem Elstertor",
+      "style": "16-bit SNES Dramatic Dark Choral",
+      "prompt": "16-bit SNES RPG dramatic church mode, deep church organ, tense brass stabs, crackling wood fire percussion, solemn Latin chant feeling."
+    },
+    {
+      "trackId": "ref_k04_worms",
+      "chapter": 4,
+      "title": "Hier stehe ich – Der Reichstag zu Worms",
+      "style": "16-bit SNES Imperial Fanfare & Regal Organ",
+      "prompt": "Majestic imperial court theme, 16-bit brass fanfares, royal harpsichord and cathedral organ, profound historic gravity, memorable melodic climax."
+    },
+    {
+      "trackId": "ref_k05_wartburg",
+      "chapter": 5,
+      "title": "Junker Jörg auf der Wartburg",
+      "style": "16-bit SNES Castle Solitude & Folk Lute",
+      "prompt": "Gentle melancholic folk lute, acoustic guitar, quiet wind whistling outside castle walls, thoughtful study and translation theme, Secret of Mana style warmth."
+    },
+    {
+      "trackId": "ref_k06_bildersturm",
+      "chapter": 6,
+      "title": "Wittenberger Unruhen & Bildersturm",
+      "style": "16-bit SNES Suspense & City Agitation",
+      "prompt": "Urgent staccato strings, warning town bells, rapid tempo, Renaissance woodwinds with minor dissonance, crowd murmurs, dramatic pacing."
+    },
+    {
+      "trackId": "ref_k07_bauernkrieg",
+      "chapter": 7,
+      "title": "Die Zwölf Artikel & der Bauernkrieg",
+      "style": "16-bit SNES Peasant Folk & Gathering Drums",
+      "prompt": "Rustic German peasant folk melody, wooden pipes, marching field drums, determined and defiant mood, historical uprising energy."
+    },
+    {
+      "trackId": "ref_k08_religionsfrieden",
+      "chapter": 8,
+      "title": "Augsburger Bekenntnis & Religionsfrieden",
+      "style": "16-bit SNES Triumphant Sacred Anthem",
+      "prompt": "Triumphant Renaissance chorale inspired by Ein feste Burg, warm brass, celebratory chimes, majestic and peaceful conclusion, bright 16-bit SNES harmony."
+    }
+  ]
+}
