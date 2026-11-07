@@ -256,11 +256,7 @@ export class WorldScene extends Phaser.Scene {
     // Expose interaction trigger globally for DOM label click & UI scene
     (window as any).__triggerInteraction = () => this.triggerInteraction();
 
-    // 12. Init Wildlife & Living World
-    this.wildlifeManager.init();
-    this.livingWorldManager.initWaterEffects(48 * 16, 52 * 16, 4 * 16, 76 * 16);
-
-    // 13. Dynamic Fireplaces, Chimney Smoke & Interior Ambient Animation
+    // 12. Dynamic Fireplaces, Chimney Smoke & Interior Ambient Animation
     this.livingWorldManager.registerFireSource(136 * 16, 17 * 16, true, 28, 0xffa533); // Cranach Esse
     this.livingWorldManager.registerFireSource(163 * 16, 50 * 16, true, 32, 0xff7722); // Wartburg Kamin
     this.livingWorldManager.registerFireSource(26 * 16, 34 * 16, false, 20, 0xffaa44);  // Tetzel Stand
@@ -500,6 +496,19 @@ export class WorldScene extends Phaser.Scene {
   }
 
   public scatterGroundFlora(): void {
+    const getFloraScale = (f: string): number => {
+      // 16-Bit SNES Proportions: Ground flora must reach player ankle/shin height (10-16px), never dwarf characters
+      if (f.startsWith('flower_bunch')) return 0.38;
+      if (f.startsWith('flower_')) return 0.32;
+      if (f.startsWith('grass_s')) return 0.45;
+      if (f.startsWith('grass_')) return 0.35;
+      if (f.startsWith('fern_big')) return 0.40;
+      if (f.startsWith('fern_')) return 0.35;
+      if (f.startsWith('mushroom_')) return 0.38;
+      if (f.startsWith('pebbles')) return 0.55;
+      return 0.35;
+    };
+
     const floraFrames = [
       'flower_red_a',
       'flower_red_b',
@@ -550,21 +559,52 @@ export class WorldScene extends Phaser.Scene {
       );
       if (nearMentor) continue;
 
-      // Do not scatter tall flora on the paved Wittenberg marketplace square (x: 14..36, y: 18..28)
-      const isPavedSquare = tx >= 14 && tx <= 36 && ty >= 18 && ty <= 28;
+      // Do not scatter wild tall flora on paved city squares and courtyards:
+      // - Wittenberg market & Schlossplatz: (tx: 10..44, ty: 16..32)
+      // - Tetzel field market: (tx: 22..30, ty: 32..38)
+      // - Fuggerplatz Augsburg: (tx: 52..72, ty: 14..30)
+      // - Worms Reichstag courtyard: (tx: 72..92, ty: 14..30)
+      // - Wartburg Castle courtyard: (tx: 12..32, ty: 66..84)
+      const isTownPaved =
+        (tx >= 10 && tx <= 44 && ty >= 16 && ty <= 32) ||
+        (tx >= 22 && tx <= 30 && ty >= 32 && ty <= 38) ||
+        (tx >= 52 && tx <= 72 && ty >= 14 && ty <= 30) ||
+        (tx >= 72 && tx <= 92 && ty >= 14 && ty <= 30) ||
+        (tx >= 12 && tx <= 32 && ty >= 66 && ty <= 84);
+
       const frameKey = validFrames.length > 0 ? Phaser.Math.RND.pick(validFrames) : undefined;
-      if (isPavedSquare && frameKey && !frameKey.startsWith('pebbles') && !frameKey.startsWith('grass_s')) {
+      if (isTownPaved && frameKey && !frameKey.startsWith('pebbles') && !frameKey.startsWith('grass_s')) {
         continue;
       }
 
       if (frameKey && this.textures.get('world_atlas')?.has(frameKey)) {
-        const flora = this.add.image(tx * 16, ty * 16, 'world_atlas', frameKey).setOrigin(0.5, 0.8).setDepth(ty * 16 - 2);
+        const scale = getFloraScale(frameKey);
+        const flora = this.add.image(tx * 16, ty * 16, 'world_atlas', frameKey)
+          .setOrigin(0.5, 0.8)
+          .setScale(scale)
+          .setDepth(ty * 16 - 2);
         this.livingWorldManager.registerFlora(flora);
       }
     }
   }
 
   public placeOverworldTreesAndNature(): void {
+    const getNatureScale = (frame: string): number => {
+      // 16-Bit SNES Proportions based on Steinzeit benchmark
+      if (frame.startsWith('bush_big') || frame.startsWith('bush_huge')) return 0.52;
+      if (frame.startsWith('bush_tall')) return 0.58;
+      if (frame.startsWith('bush_')) return 0.65;
+      if (frame.startsWith('pebbles') || frame.startsWith('rock_small') || frame.startsWith('rock_flat')) return 0.55;
+      if (frame.startsWith('rock_tall') || frame.startsWith('rock_')) return 0.60;
+      if (frame.startsWith('stump_')) return 0.58;
+      if (frame.startsWith('logs_')) return 0.56;
+      if (frame.startsWith('fern_big')) return 0.40;
+      if (frame.startsWith('fern_')) return 0.35;
+      if (frame.startsWith('tree_oak_tall') || frame.startsWith('tree_pine_tall')) return 0.90;
+      if (frame.startsWith('tree_pine_slim') || frame.startsWith('tree_small')) return 0.85;
+      return 1.0;
+    };
+
     interface NatureItem {
       x: number;
       y: number;
@@ -595,7 +635,7 @@ export class WorldScene extends Phaser.Scene {
       { x: 10, y: 68, frame: 'stump_axe' },
       { x: 26, y: 68, frame: 'stump_a' },
 
-      // 2. Wittenberg Castle Park & Town Environs (Northwest)
+      // 2. Wittenberg Castle Park & Town Environs (Northwest: Clean verges outside paved market)
       { x: 6, y: 8, frame: 'tree_oak_tall', scale: 0.9, isFlora: true },
       { x: 12, y: 8, frame: 'tree_oak_1', isFlora: true },
       { x: 18, y: 8, frame: 'tree_oak_2', isFlora: true },
@@ -611,11 +651,11 @@ export class WorldScene extends Phaser.Scene {
       { x: 44, y: 15, frame: 'tree_apple', isFlora: true },
       { x: 30, y: 33, frame: 'tree_willow', isFlora: true },
       { x: 42, y: 33, frame: 'tree_willow', isFlora: true },
-      { x: 14, y: 28, frame: 'bush_berry_red', isFlora: true },
-      { x: 32, y: 22, frame: 'bush_big_green', isFlora: true },
-      { x: 42, y: 22, frame: 'bush_berry_blue', isFlora: true },
-      { x: 18, y: 23, frame: 'bush_berry_red', isFlora: true },
-      { x: 34, y: 24, frame: 'bush_berry_orange', isFlora: true },
+      // Town garden verges (placed along borders, never obstructing market stalls or square)
+      { x: 8, y: 26, frame: 'bush_berry_red', isFlora: true },
+      { x: 8, y: 18, frame: 'bush_berry_red', isFlora: true },
+      { x: 44, y: 26, frame: 'bush_berry_orange', isFlora: true },
+      { x: 46, y: 22, frame: 'bush_berry_blue', isFlora: true },
       { x: 22, y: 25, frame: 'pebbles_a' },
       { x: 26, y: 26, frame: 'pebbles_b' },
       { x: 30, y: 24, frame: 'pebbles_c' },
@@ -674,10 +714,11 @@ export class WorldScene extends Phaser.Scene {
 
     for (const item of natureItems) {
       if (this.textures.get('world_atlas')?.has(item.frame)) {
+        const finalScale = item.scale !== undefined ? item.scale : getNatureScale(item.frame);
         const spr = this.add
           .image(item.x * 16, item.y * 16, 'world_atlas', item.frame)
           .setOrigin(0.5, 0.9)
-          .setScale(item.scale || 1.0)
+          .setScale(finalScale)
           .setDepth(item.y * 16);
 
         if (item.isFlora) {

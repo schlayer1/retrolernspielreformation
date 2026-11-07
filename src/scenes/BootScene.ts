@@ -58,11 +58,11 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 21,
     });
     this.load.spritesheet('pigeon_peck', '/assets/fauna/cafe_pigeon_pecking_strip.png', {
-      frameWidth: 16,
+      frameWidth: 13,
       frameHeight: 11,
     });
     this.load.spritesheet('pigeon_white_peck', '/assets/fauna/cafe_pigeon_white_pecking_strip.png', {
-      frameWidth: 16,
+      frameWidth: 13,
       frameHeight: 11,
     });
     this.load.spritesheet('farm_horse_walk', '/assets/fauna/farm_horse_walk_strip.png', {
@@ -446,11 +446,11 @@ export class BootScene extends Phaser.Scene {
     // ----------------------------------------------------
     // 3. Fauna & Tier-Animationen
     // ----------------------------------------------------
-    // Stadt-Tauben (Marktplatz Wittenberg)
+    // Stadt-Tauben (Marktplatz Wittenberg: 16 Frames pro 208x11 Streifen à 13x11px)
     if (this.textures.exists('pigeon_peck')) {
       this.anims.create({
         key: 'pigeon-peck',
-        frames: this.anims.generateFrameNumbers('pigeon_peck', { start: 0, end: 12 }),
+        frames: this.anims.generateFrameNumbers('pigeon_peck', { start: 0, end: 15 }),
         frameRate: 6,
         repeat: -1,
       });
@@ -458,7 +458,7 @@ export class BootScene extends Phaser.Scene {
     if (this.textures.exists('pigeon_white_peck')) {
       this.anims.create({
         key: 'pigeon-white-peck',
-        frames: this.anims.generateFrameNumbers('pigeon_white_peck', { start: 0, end: 12 }),
+        frames: this.anims.generateFrameNumbers('pigeon_white_peck', { start: 0, end: 15 }),
         frameRate: 6,
         repeat: -1,
       });

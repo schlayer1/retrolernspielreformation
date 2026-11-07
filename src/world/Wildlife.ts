@@ -119,9 +119,16 @@ export class WildlifeManager {
     const anim = isWhite ? 'pigeon-white-peck' : 'pigeon-peck';
     if (!this.scene.textures.exists(key)) return;
 
+    // Native frame is 13x11 px: scale 1.0 renders a crisp, delicate 16-bit pigeon reaching player ankle height
     const sprite = this.scene.add.sprite(x, y, key).setScale(1.0).setDepth(y);
     if (this.scene.anims.exists(anim)) {
       sprite.play(anim);
+      const totalFrames = sprite.anims.currentAnim?.frames.length || 16;
+      const startIdx = Phaser.Math.Between(0, totalFrames - 1);
+      const frame = sprite.anims.currentAnim?.frames[startIdx];
+      if (frame) {
+        sprite.anims.setCurrentFrame(frame);
+      }
     }
     this.pigeons.push({
       sprite,
