@@ -170,7 +170,12 @@ export class WorldScene extends Phaser.Scene {
 
     // 3. Initialize Subsystems
     this.wildlifeManager = new WildlifeManager(this);
+    this.wildlifeManager.init();
     this.livingWorldManager = new LivingWorldManager(this);
+    this.livingWorldManager.initWaterEffects(48 * 16, 52 * 16, 12 * 16, 84 * 16);
+    this.livingWorldManager.registerFireSource(36 * 16, 17 * 16, true);
+    this.livingWorldManager.registerFireSource(56 * 16, 71 * 16, true);
+    this.livingWorldManager.registerFireSource(22 * 16, 69 * 16, true);
     this.chapterBanner = new ChapterBanner();
     this.companionManager = new CompanionManager(this);
     this.atmosphereManager = new AtmosphereManager(this);
@@ -178,8 +183,9 @@ export class WorldScene extends Phaser.Scene {
     this.atmosphereManager.setChapterMood(gameState.chapter);
     this.ambientSpeechManager = new AmbientSpeechManager(this);
 
-    // 4. Dense Ground Flora Scattering (Outdoors only)
+    // 4. Dense Ground Flora Scattering (Outdoors only) & Secret of Mana Nature
     this.scatterGroundFlora();
+    this.placeOverworldTreesAndNature();
     this.buildPlateauCliffs();
 
     // 5. Place Static Decor & Real Architecture Buildings
@@ -494,18 +500,168 @@ export class WorldScene extends Phaser.Scene {
   }
 
   public scatterGroundFlora(): void {
-    const floraFrames = ['flower_red', 'flower_blue', 'flower_yellow', 'mushroom_brown', 'grass_tuft', 'pebble_small'];
+    const floraFrames = [
+      'flower_red_a',
+      'flower_red_b',
+      'flower_blue_a',
+      'flower_blue_b',
+      'flower_purple',
+      'flower_sun',
+      'flower_white',
+      'flower_tulip_y',
+      'flower_pink',
+      'flower_bunch_a',
+      'flower_bunch_b',
+      'flower_bunch_c',
+      'mushroom_red',
+      'mushroom_b',
+      'mushroom_small',
+      'grass_1',
+      'grass_2',
+      'grass_3',
+      'grass_4',
+      'grass_s1',
+      'grass_s2',
+      'grass_s3',
+      'grass_s4',
+      'fern_1',
+      'fern_2',
+      'fern_3',
+      'fern_4',
+      'fern_big',
+      'pebbles_a',
+      'pebbles_b',
+      'pebbles_c',
+    ];
     const validFrames = floraFrames.filter((f) => this.textures.get('world_atlas')?.has(f));
 
-    const count = 140;
+    const count = 180;
     for (let i = 0; i < count; i++) {
       const tx = Phaser.Math.Between(4, 90);
       const ty = Phaser.Math.Between(4, 82);
+
+      // Do not scatter in deep river water
+      const riverCenter = 50 + Math.sin(ty * 0.08) * 3.5;
+      if (Math.abs(tx - riverCenter) < 2.0) continue;
+
       const frameKey = validFrames.length > 0 ? Phaser.Math.RND.pick(validFrames) : undefined;
 
       if (frameKey && this.textures.get('world_atlas')?.has(frameKey)) {
         const flora = this.add.image(tx * 16, ty * 16, 'world_atlas', frameKey).setOrigin(0.5, 0.8).setDepth(ty * 16 - 2);
         this.livingWorldManager.registerFlora(flora);
+      }
+    }
+  }
+
+  public placeOverworldTreesAndNature(): void {
+    interface NatureItem {
+      x: number;
+      y: number;
+      frame: string;
+      scale?: number;
+      isFlora?: boolean;
+    }
+
+    const natureItems: NatureItem[] = [
+      // 1. Thüringer Wald / Wartburg Mountain Woods (Southwest)
+      { x: 6, y: 64, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
+      { x: 10, y: 64, frame: 'tree_pine_1', isFlora: true },
+      { x: 6, y: 70, frame: 'tree_pine_2', isFlora: true },
+      { x: 8, y: 74, frame: 'tree_fir_1', isFlora: true },
+      { x: 6, y: 78, frame: 'tree_pine_3', isFlora: true },
+      { x: 10, y: 82, frame: 'tree_fir_2', isFlora: true },
+      { x: 14, y: 84, frame: 'tree_pine_4', isFlora: true },
+      { x: 18, y: 86, frame: 'tree_pine_5', isFlora: true },
+      { x: 28, y: 84, frame: 'tree_pine_1', isFlora: true },
+      { x: 32, y: 80, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
+      { x: 30, y: 74, frame: 'tree_fir_3', isFlora: true },
+      { x: 28, y: 68, frame: 'tree_pine_slim', isFlora: true },
+      // Mountain rocks, stumps & logs
+      { x: 8, y: 80, frame: 'rock_big_a', scale: 0.9 },
+      { x: 12, y: 86, frame: 'rock_moss_a' },
+      { x: 26, y: 86, frame: 'rock_cluster' },
+      { x: 30, y: 82, frame: 'logs_a' },
+      { x: 10, y: 68, frame: 'stump_axe' },
+      { x: 26, y: 68, frame: 'stump_a' },
+
+      // 2. Wittenberg Castle Park & Town Environs (Northwest)
+      { x: 6, y: 8, frame: 'tree_oak_tall', scale: 0.9, isFlora: true },
+      { x: 12, y: 8, frame: 'tree_oak_1', isFlora: true },
+      { x: 18, y: 8, frame: 'tree_oak_2', isFlora: true },
+      { x: 24, y: 8, frame: 'tree_oak_3', isFlora: true },
+      { x: 30, y: 8, frame: 'tree_oak_tall', scale: 0.9, isFlora: true },
+      { x: 38, y: 8, frame: 'tree_oak_1', isFlora: true },
+      { x: 44, y: 8, frame: 'tree_oak_2', isFlora: true },
+      { x: 6, y: 14, frame: 'tree_oak_2', isFlora: true },
+      { x: 6, y: 22, frame: 'tree_small_1', isFlora: true },
+      { x: 6, y: 28, frame: 'tree_small_2', isFlora: true },
+      { x: 14, y: 28, frame: 'bush_berry_red', isFlora: true },
+      { x: 32, y: 22, frame: 'bush_big_green', isFlora: true },
+      { x: 42, y: 22, frame: 'bush_berry_blue', isFlora: true },
+
+      // 3. River Elbe & Mulde Weeping Willows (along banks)
+      { x: 45, y: 12, frame: 'tree_willow', isFlora: true },
+      { x: 44, y: 28, frame: 'tree_willow', isFlora: true },
+      { x: 45, y: 44, frame: 'tree_willow', isFlora: true },
+      { x: 44, y: 60, frame: 'tree_willow', isFlora: true },
+      { x: 45, y: 76, frame: 'tree_willow', isFlora: true },
+      { x: 55, y: 14, frame: 'tree_willow', isFlora: true },
+      { x: 56, y: 30, frame: 'tree_willow', isFlora: true },
+      { x: 55, y: 46, frame: 'tree_willow', isFlora: true },
+      { x: 56, y: 62, frame: 'tree_willow', isFlora: true },
+      { x: 55, y: 78, frame: 'tree_willow', isFlora: true },
+      { x: 46, y: 20, frame: 'pebbles_a' },
+      { x: 54, y: 38, frame: 'rock_moss_b' },
+      { x: 46, y: 56, frame: 'pebbles_b' },
+      { x: 54, y: 72, frame: 'pebbles_c' },
+
+      // 4. Katharina's Monastery Garden & Streuobstwiese
+      { x: 32, y: 42, frame: 'tree_apple', isFlora: true },
+      { x: 40, y: 40, frame: 'tree_pear', isFlora: true },
+      { x: 46, y: 42, frame: 'tree_apple', isFlora: true },
+      { x: 30, y: 44, frame: 'bush_berry_red', isFlora: true },
+      { x: 46, y: 52, frame: 'bush_berry_blue', isFlora: true },
+      // Peasant Orchards around Frankenhausen
+      { x: 52, y: 62, frame: 'tree_apple', isFlora: true },
+      { x: 62, y: 62, frame: 'tree_pear', isFlora: true },
+      { x: 68, y: 66, frame: 'tree_apple', isFlora: true },
+      { x: 50, y: 70, frame: 'bush_big_green', isFlora: true },
+      { x: 68, y: 74, frame: 'bush_berry_orange', isFlora: true },
+      { x: 54, y: 80, frame: 'logs_b' },
+
+      // 5. East Border Forests (Worms & Augsburg)
+      { x: 56, y: 8, frame: 'tree_autumn_1', isFlora: true },
+      { x: 66, y: 8, frame: 'tree_autumn_2', isFlora: true },
+      { x: 76, y: 8, frame: 'tree_oak_tall', scale: 0.9, isFlora: true },
+      { x: 86, y: 8, frame: 'tree_oak_1', isFlora: true },
+      { x: 92, y: 8, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
+      { x: 92, y: 18, frame: 'tree_pine_1', isFlora: true },
+      { x: 92, y: 26, frame: 'tree_autumn_1', isFlora: true },
+      { x: 92, y: 36, frame: 'tree_pine_2', isFlora: true },
+      { x: 92, y: 48, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
+      { x: 92, y: 60, frame: 'tree_autumn_2', isFlora: true },
+      { x: 92, y: 72, frame: 'tree_pine_3', isFlora: true },
+      { x: 92, y: 82, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
+      { x: 72, y: 84, frame: 'tree_pine_1', isFlora: true },
+      { x: 78, y: 84, frame: 'tree_pine_2', isFlora: true },
+      { x: 84, y: 84, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
+      { x: 88, y: 84, frame: 'tree_fir_1', isFlora: true },
+      { x: 72, y: 32, frame: 'tree_oak_2', isFlora: true },
+      { x: 74, y: 38, frame: 'tree_small_3', isFlora: true },
+      { x: 70, y: 44, frame: 'bush_big_green', isFlora: true },
+    ];
+
+    for (const item of natureItems) {
+      if (this.textures.get('world_atlas')?.has(item.frame)) {
+        const spr = this.add
+          .image(item.x * 16, item.y * 16, 'world_atlas', item.frame)
+          .setOrigin(0.5, 0.9)
+          .setScale(item.scale || 1.0)
+          .setDepth(item.y * 16);
+
+        if (item.isFlora) {
+          this.livingWorldManager.registerFlora(spr);
+        }
       }
     }
   }
@@ -750,42 +906,43 @@ export class WorldScene extends Phaser.Scene {
 
       // Facing & Walk Animation
       const g = gameState.gender;
+      this.player.setFlipX(false);
       if (Math.abs(vx) > Math.abs(vy)) {
         if (vx > 0) {
           this.facing = 'right';
-          this.player.setFlipX(false);
           const aKey = this.anims.exists(`walk-${g}-right`) ? `walk-${g}-right` : 'walk-right';
           this.player.play(aKey, true);
         } else {
           this.facing = 'left';
-          this.player.setFlipX(true);
-          const aKey = this.anims.exists(`walk-${g}-left`) ? `walk-${g}-left` : (this.anims.exists(`walk-${g}-right`) ? `walk-${g}-right` : 'walk-right');
+          const aKey = this.anims.exists(`walk-${g}-left`) ? `walk-${g}-left` : 'walk-left';
           this.player.play(aKey, true);
         }
       } else {
         if (vy > 0) {
           this.facing = 'down';
-          this.player.setFlipX(false);
           const aKey = this.anims.exists(`walk-${g}-down`) ? `walk-${g}-down` : 'walk-down';
           this.player.play(aKey, true);
         } else {
           this.facing = 'up';
-          this.player.setFlipX(false);
           const aKey = this.anims.exists(`walk-${g}-up`) ? `walk-${g}-up` : 'walk-up';
           this.player.play(aKey, true);
         }
       }
     } else {
       const g = gameState.gender;
-      const idleKey = `idle-${g}-${this.facing}`;
-      if (this.anims.exists(idleKey)) {
+      this.player.setFlipX(false);
+      const idleKey = this.anims.exists(`idle-${g}-${this.facing}`)
+        ? `idle-${g}-${this.facing}`
+        : (this.anims.exists(`idle-${this.facing}`) ? `idle-${this.facing}` : null);
+      if (idleKey) {
         this.player.play(idleKey, true);
       } else {
         this.player.stop();
         if (this.facing === 'down') this.player.setFrame(0);
-        else if (this.facing === 'right') this.player.setFrame(17);
-        else if (this.facing === 'up') this.player.setFrame(34);
-        else this.player.setFrame(17);
+        else if (this.facing === 'up') this.player.setFrame(6);
+        else if (this.facing === 'right') this.player.setFrame(12);
+        else if (this.facing === 'left') this.player.setFrame(18);
+        else this.player.setFrame(0);
       }
     }
 

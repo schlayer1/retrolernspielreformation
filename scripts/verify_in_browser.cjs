@@ -5,7 +5,7 @@ const fs = require('fs');
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const ARTIFACT_DIR = path.resolve(__dirname, '..', 'artifacts');
-const CONV_DIR = '/Users/nicolekeller/.gemini/antigravity/brain/f95fdc3f-3064-43f6-8d47-4f5743487b64';
+const CONV_DIR = '/Users/nicolekeller/.gemini/antigravity/brain/f30679f4-6f30-4f17-ad2d-ab40dd2c3e8a';
 const PORT = 4187;
 
 if (!fs.existsSync(ARTIFACT_DIR)) {
@@ -112,6 +112,35 @@ async function main() {
     await sleep(800);
     await saveScreenshot(page, 'verify_4_ch1_overworld.png');
 
+    // 4a-d. Test & verify 4-direction turning with character movement
+    // Walk Right
+    await page.keyboard.down('KeyD');
+    await sleep(400);
+    await page.keyboard.up('KeyD');
+    await sleep(150);
+    await saveScreenshot(page, 'verify_4a_facing_right.png');
+
+    // Walk Left
+    await page.keyboard.down('KeyA');
+    await sleep(500);
+    await page.keyboard.up('KeyA');
+    await sleep(150);
+    await saveScreenshot(page, 'verify_4b_facing_left.png');
+
+    // Walk Up
+    await page.keyboard.down('KeyW');
+    await sleep(400);
+    await page.keyboard.up('KeyW');
+    await sleep(150);
+    await saveScreenshot(page, 'verify_4c_facing_up.png');
+
+    // Walk Down
+    await page.keyboard.down('KeyS');
+    await sleep(400);
+    await page.keyboard.up('KeyS');
+    await sleep(150);
+    await saveScreenshot(page, 'verify_4d_facing_down.png');
+
     // 5. River & Flora exploration
     await page.evaluate(() => {
       const win = window;
@@ -119,8 +148,8 @@ async function main() {
       if (game) {
         const world = game.scene.getScene('WorldScene');
         if (world && world.player) {
-          world.player.setPosition(44 * 16, 64 * 16);
-          world.cameras.main.centerOn(44 * 16, 64 * 16);
+          world.player.setPosition(42 * 16, 64 * 16);
+          world.cameras.main.centerOn(42 * 16, 64 * 16);
         }
       }
     });

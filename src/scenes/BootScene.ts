@@ -15,14 +15,26 @@ export class BootScene extends Phaser.Scene {
     this.load.image('cliffs_desert', '/assets/world/cliffs_desert.png');
     this.load.image('Overworld', '/assets/gfx/Overworld.png');
 
-    // 2. Main Character Spritesheet (16x32)
-    this.load.spritesheet('character', '/assets/gfx/character.png', {
-      frameWidth: 16,
-      frameHeight: 32,
+    // 2. Main Character Spritesheets (48x64 standard 16-bit Keep Characters)
+    this.load.spritesheet('character', '/assets/characters/keep_squire.png', {
+      frameWidth: 48,
+      frameHeight: 64,
+    });
+    this.load.spritesheet('character_female', '/assets/characters/keep_peasant_f.png', {
+      frameWidth: 48,
+      frameHeight: 64,
     });
 
     // 3. Keep Characters (48x64)
-    const chars = ['keep_monk', 'keep_noble', 'keep_king', 'keep_guard'];
+    const chars = [
+      'keep_monk',
+      'keep_noble',
+      'keep_king',
+      'keep_guard',
+      'keep_captain',
+      'keep_merchant',
+      'keep_farmer',
+    ];
     for (const c of chars) {
       this.load.spritesheet(c, `/assets/characters/${c}.png`, {
         frameWidth: 48,
@@ -40,7 +52,7 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 32,
     });
 
-    // 5. Fauna & Companion
+    // 5. Fauna & Companion (16-Bit Living World Strips & Sheets)
     this.load.spritesheet('farm_dog_walk', '/assets/fauna/farm_dog_walk_strip.png', {
       frameWidth: 26,
       frameHeight: 21,
@@ -48,6 +60,86 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('farm_dog_idle', '/assets/fauna/farm_dog_idle_strip.png', {
       frameWidth: 26,
       frameHeight: 21,
+    });
+    this.load.spritesheet('farm_horse_walk', '/assets/fauna/farm_horse_walk_strip.png', {
+      frameWidth: 46,
+      frameHeight: 39,
+    });
+    this.load.spritesheet('farm_horse_idle', '/assets/fauna/farm_horse_idle_strip.png', {
+      frameWidth: 46,
+      frameHeight: 39,
+    });
+    this.load.spritesheet('farm_horse_graze', '/assets/fauna/farm_horse_graze_strip.png', {
+      frameWidth: 46,
+      frameHeight: 39,
+    });
+    this.load.spritesheet('farm_cow_walk', '/assets/fauna/farm_cow_brown_walk_strip.png', {
+      frameWidth: 40,
+      frameHeight: 30,
+    });
+    this.load.spritesheet('farm_cow_idle', '/assets/fauna/farm_cow_brown_idle_strip.png', {
+      frameWidth: 40,
+      frameHeight: 30,
+    });
+    this.load.spritesheet('farm_cow_graze', '/assets/fauna/farm_cow_graze_strip.png', {
+      frameWidth: 40,
+      frameHeight: 30,
+    });
+    this.load.spritesheet('farm_sheep_walk', '/assets/fauna/farm_sheep_walk_strip.png', {
+      frameWidth: 30,
+      frameHeight: 24,
+    });
+    this.load.spritesheet('farm_sheep_idle', '/assets/fauna/farm_sheep_idle_strip.png', {
+      frameWidth: 30,
+      frameHeight: 24,
+    });
+    this.load.spritesheet('farm_sheep_graze', '/assets/fauna/farm_sheep_graze_strip.png', {
+      frameWidth: 30,
+      frameHeight: 24,
+    });
+    this.load.spritesheet('farm_pig_walk', '/assets/fauna/farm_pig_walk_strip.png', {
+      frameWidth: 30,
+      frameHeight: 23,
+    });
+    this.load.spritesheet('farm_pig_idle', '/assets/fauna/farm_pig_idle_strip.png', {
+      frameWidth: 30,
+      frameHeight: 23,
+    });
+    this.load.spritesheet('farm_chicken_walk', '/assets/fauna/farm_chicken_brown_walk_strip.png', {
+      frameWidth: 18,
+      frameHeight: 17,
+    });
+    this.load.spritesheet('farm_chicken_peck', '/assets/fauna/farm_chicken_brown_peck_strip.png', {
+      frameWidth: 18,
+      frameHeight: 17,
+    });
+    this.load.spritesheet('farm_chicken_idle', '/assets/fauna/farm_chicken_idle_strip.png', {
+      frameWidth: 18,
+      frameHeight: 17,
+    });
+    this.load.spritesheet('farm_duck_swim', '/assets/fauna/farm_duck_swim_strip.png', {
+      frameWidth: 21,
+      frameHeight: 17,
+    });
+    this.load.spritesheet('farm_duck_walk', '/assets/fauna/farm_duck_walk_strip.png', {
+      frameWidth: 21,
+      frameHeight: 17,
+    });
+    this.load.spritesheet('farm_frog_hop', '/assets/fauna/farm_frog_hop_strip.png', {
+      frameWidth: 18,
+      frameHeight: 18,
+    });
+    this.load.spritesheet('farm_frog_idle', '/assets/fauna/farm_frog_idle_strip.png', {
+      frameWidth: 18,
+      frameHeight: 18,
+    });
+    this.load.spritesheet('farm_butterfly_blue', '/assets/fauna/farm_butterfly_blue_strip.png', {
+      frameWidth: 16,
+      frameHeight: 13,
+    });
+    this.load.spritesheet('farm_butterfly_yellow', '/assets/fauna/farm_butterfly_yellow_strip.png', {
+      frameWidth: 16,
+      frameHeight: 13,
     });
     this.load.spritesheet('cow_brown', '/assets/fauna/cow_brown.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('calf_brown', '/assets/fauna/calf_brown.png', { frameWidth: 32, frameHeight: 32 });
@@ -141,75 +233,14 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.createFemaleCharacterSheet();
     this.createAnimations();
     this.extractPreviewImages();
     this.scene.start('WorldScene');
     this.scene.start('UIScene');
   }
 
-  private createFemaleCharacterSheet(): void {
-    try {
-      const srcImg = this.textures.get('character').getSourceImage() as HTMLImageElement;
-      const w = srcImg.width;
-      const h = srcImg.height;
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(srcImg, 0, 0);
-
-      const imgData = ctx.getImageData(0, 0, w, h);
-      const d = imgData.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i];
-        const g = d[i + 1];
-        const b = d[i + 2];
-        const a = d[i + 3];
-        if (a > 128 && r > 130 && r > g * 1.45 && r > b * 1.45) {
-          d[i] = Math.min(255, Math.round(b * 0.9 + 25));
-          d[i + 1] = Math.min(255, Math.round(r * 0.68));
-          d[i + 2] = Math.min(255, Math.round(r * 1.05));
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-
-      for (let row = 0; row < 4; row++) {
-        for (let col = 0; col < 4; col++) {
-          const fx = col * 16;
-          const fy = row * 32;
-          ctx.fillStyle = '#f2c94c';
-          ctx.fillRect(fx + 5, fy + 9, 6, 1);
-          ctx.fillStyle = '#5a3420';
-          if (row === 0 || row === 2) {
-            ctx.fillRect(fx + 2, fy + 14, 2, 6);
-            ctx.fillRect(fx + 12, fy + 14, 2, 6);
-            ctx.fillStyle = '#f2c94c';
-            ctx.fillRect(fx + 2, fy + 19, 1, 1);
-            ctx.fillRect(fx + 13, fy + 19, 1, 1);
-          } else if (row === 1) {
-            ctx.fillRect(fx + 2, fy + 13, 2, 7);
-            ctx.fillStyle = '#f2c94c';
-            ctx.fillRect(fx + 2, fy + 19, 1, 1);
-          } else if (row === 3) {
-            ctx.fillRect(fx + 12, fy + 13, 2, 7);
-            ctx.fillStyle = '#f2c94c';
-            ctx.fillRect(fx + 13, fy + 19, 1, 1);
-          }
-        }
-      }
-
-      this.textures.addSpriteSheet('character_female', canvas as unknown as HTMLImageElement, {
-        frameWidth: 16,
-        frameHeight: 32,
-      });
-    } catch {
-      // Fallback
-    }
-  }
-
   private extractPreviewImages(): void {
-    const toDataUrl = (texKey: string, sx = 0, sy = 0, sw = 16, sh = 32): string => {
+    const toDataUrl = (texKey: string, sx = 12, sy = 6, sw = 24, sh = 48): string => {
       try {
         const src = this.textures.get(texKey).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
         const c = document.createElement('canvas');
@@ -224,25 +255,33 @@ export class BootScene extends Phaser.Scene {
       }
     };
 
-    gameState.malePreviewUrl = toDataUrl('character', 0, 0, 16, 32);
-    gameState.femalePreviewUrl = toDataUrl('character_female', 0, 0, 16, 32) || gameState.malePreviewUrl;
+    gameState.malePreviewUrl = toDataUrl('character', 12, 6, 24, 48);
+    gameState.femalePreviewUrl = toDataUrl('character_female', 12, 6, 24, 48) || gameState.malePreviewUrl;
   }
 
   private createAnimations(): void {
-    // 16x32 LPC Player Animations for Male & Female
-    const dirs = [
-      { name: 'down', start: 0 },
-      { name: 'right', start: 17 },
-      { name: 'up', start: 34 },
-      { name: 'left', start: 51 },
+    // 48x64 Standard 16-Bit Keep Player Animations
+    // Row 0: Idle Down (f0)
+    // Row 1: Idle Up (f6)
+    // Row 2: Idle Right (f12)
+    // Row 3: Idle Left (f18)
+    // Row 4: Walk Down (f24..29)
+    // Row 5: Walk Up (f30..35)
+    // Row 6: Walk Right (f36..41)
+    // Row 7: Walk Left (f42..47)
+    const charConfigs = [
+      { name: 'down', walkStart: 24, walkEnd: 29, idleFrame: 0 },
+      { name: 'up', walkStart: 30, walkEnd: 35, idleFrame: 6 },
+      { name: 'right', walkStart: 36, walkEnd: 41, idleFrame: 12 },
+      { name: 'left', walkStart: 42, walkEnd: 47, idleFrame: 18 },
     ];
 
-    dirs.forEach(({ name, start }) => {
+    charConfigs.forEach(({ name, walkStart, walkEnd, idleFrame }) => {
       // Male / default
       if (!this.anims.exists(`walk-${name}`)) {
         this.anims.create({
           key: `walk-${name}`,
-          frames: this.anims.generateFrameNumbers('character', { start, end: start + 3 }),
+          frames: this.anims.generateFrameNumbers('character', { start: walkStart, end: walkEnd }),
           frameRate: 8,
           repeat: -1,
         });
@@ -250,7 +289,7 @@ export class BootScene extends Phaser.Scene {
       if (!this.anims.exists(`walk-male-${name}`)) {
         this.anims.create({
           key: `walk-male-${name}`,
-          frames: this.anims.generateFrameNumbers('character', { start, end: start + 3 }),
+          frames: this.anims.generateFrameNumbers('character', { start: walkStart, end: walkEnd }),
           frameRate: 8,
           repeat: -1,
         });
@@ -258,7 +297,14 @@ export class BootScene extends Phaser.Scene {
       if (!this.anims.exists(`idle-male-${name}`)) {
         this.anims.create({
           key: `idle-male-${name}`,
-          frames: [{ key: 'character', frame: start }],
+          frames: [{ key: 'character', frame: idleFrame }],
+          frameRate: 1,
+        });
+      }
+      if (!this.anims.exists(`idle-${name}`)) {
+        this.anims.create({
+          key: `idle-${name}`,
+          frames: [{ key: 'character', frame: idleFrame }],
           frameRate: 1,
         });
       }
@@ -268,7 +314,7 @@ export class BootScene extends Phaser.Scene {
         if (!this.anims.exists(`walk-female-${name}`)) {
           this.anims.create({
             key: `walk-female-${name}`,
-            frames: this.anims.generateFrameNumbers('character_female', { start, end: start + 3 }),
+            frames: this.anims.generateFrameNumbers('character_female', { start: walkStart, end: walkEnd }),
             frameRate: 8,
             repeat: -1,
           });
@@ -276,32 +322,229 @@ export class BootScene extends Phaser.Scene {
         if (!this.anims.exists(`idle-female-${name}`)) {
           this.anims.create({
             key: `idle-female-${name}`,
-            frames: [{ key: 'character_female', frame: start }],
+            frames: [{ key: 'character_female', frame: idleFrame }],
             frameRate: 1,
           });
         }
       }
     });
 
-    // Player Character Anims (48x64 standard: row 0 idle, row 1 walk down)
-    const createKeepAnims = (key: string) => {
-      if (this.textures.exists(key)) {
-        if (!this.anims.exists(`${key}-walk-down`)) {
+    // NPC keep characters: walk-down and idle
+    const npcKeepList = ['keep_monk', 'keep_noble', 'keep_king', 'keep_guard', 'keep_captain', 'keep_merchant', 'keep_farmer'];
+    npcKeepList.forEach((k) => {
+      if (this.textures.exists(k)) {
+        if (!this.anims.exists(`${k}-walk-down`)) {
           this.anims.create({
-            key: `${key}-walk-down`,
-            frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }),
+            key: `${k}-walk-down`,
+            frames: this.anims.generateFrameNumbers(k, { start: 24, end: 29 }),
             frameRate: 6,
             repeat: -1,
           });
         }
+        if (!this.anims.exists(`${k}-idle-down`)) {
+          this.anims.create({
+            key: `${k}-idle-down`,
+            frames: [{ key: k, frame: 0 }],
+            frameRate: 1,
+          });
+        }
       }
-    };
+    });
 
-    createKeepAnims('character');
-    createKeepAnims('keep_monk');
-    createKeepAnims('keep_noble');
-    createKeepAnims('keep_king');
-    createKeepAnims('keep_guard');
+    // Dog Anims
+    if (this.textures.exists('farm_dog_walk') && !this.anims.exists('dog-walk')) {
+      this.anims.create({
+        key: 'dog-walk',
+        frames: this.anims.generateFrameNumbers('farm_dog_walk', { start: 0, end: 5 }),
+        frameRate: 10,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_dog_idle') && !this.anims.exists('dog-idle')) {
+      this.anims.create({
+        key: 'dog-idle',
+        frames: this.anims.generateFrameNumbers('farm_dog_idle', { start: 0, end: 3 }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+
+    // Fauna Animations
+    // Horse
+    if (this.textures.exists('farm_horse_walk') && !this.anims.exists('horse-walk')) {
+      this.anims.create({
+        key: 'horse-walk',
+        frames: this.anims.generateFrameNumbers('farm_horse_walk', { start: 0, end: 5 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_horse_idle') && !this.anims.exists('horse-idle')) {
+      this.anims.create({
+        key: 'horse-idle',
+        frames: this.anims.generateFrameNumbers('farm_horse_idle', { start: 0, end: 7 }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_horse_graze') && !this.anims.exists('horse-graze')) {
+      this.anims.create({
+        key: 'horse-graze',
+        frames: this.anims.generateFrameNumbers('farm_horse_graze', { start: 0, end: 7 }),
+        frameRate: 3,
+        repeat: -1,
+      });
+    }
+
+    // Cow
+    if (this.textures.exists('farm_cow_walk') && !this.anims.exists('cow-walk')) {
+      this.anims.create({
+        key: 'cow-walk',
+        frames: this.anims.generateFrameNumbers('farm_cow_walk', { start: 0, end: 5 }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_cow_idle') && !this.anims.exists('cow-idle')) {
+      this.anims.create({
+        key: 'cow-idle',
+        frames: this.anims.generateFrameNumbers('farm_cow_idle', { start: 0, end: 7 }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_cow_graze') && !this.anims.exists('cow-graze')) {
+      this.anims.create({
+        key: 'cow-graze',
+        frames: this.anims.generateFrameNumbers('farm_cow_graze', { start: 0, end: 7 }),
+        frameRate: 3,
+        repeat: -1,
+      });
+    }
+
+    // Sheep
+    if (this.textures.exists('farm_sheep_walk') && !this.anims.exists('sheep-walk')) {
+      this.anims.create({
+        key: 'sheep-walk',
+        frames: this.anims.generateFrameNumbers('farm_sheep_walk', { start: 0, end: 5 }),
+        frameRate: 7,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_sheep_idle') && !this.anims.exists('sheep-idle')) {
+      this.anims.create({
+        key: 'sheep-idle',
+        frames: this.anims.generateFrameNumbers('farm_sheep_idle', { start: 0, end: 7 }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_sheep_graze') && !this.anims.exists('sheep-graze')) {
+      this.anims.create({
+        key: 'sheep-graze',
+        frames: this.anims.generateFrameNumbers('farm_sheep_graze', { start: 0, end: 7 }),
+        frameRate: 3,
+        repeat: -1,
+      });
+    }
+
+    // Pig
+    if (this.textures.exists('farm_pig_walk') && !this.anims.exists('pig-walk')) {
+      this.anims.create({
+        key: 'pig-walk',
+        frames: this.anims.generateFrameNumbers('farm_pig_walk', { start: 0, end: 5 }),
+        frameRate: 7,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_pig_idle') && !this.anims.exists('pig-idle')) {
+      this.anims.create({
+        key: 'pig-idle',
+        frames: this.anims.generateFrameNumbers('farm_pig_idle', { start: 0, end: 7 }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+
+    // Chicken
+    if (this.textures.exists('farm_chicken_walk') && !this.anims.exists('chicken-walk')) {
+      this.anims.create({
+        key: 'chicken-walk',
+        frames: this.anims.generateFrameNumbers('farm_chicken_walk', { start: 0, end: 5 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_chicken_peck') && !this.anims.exists('chicken-peck')) {
+      this.anims.create({
+        key: 'chicken-peck',
+        frames: this.anims.generateFrameNumbers('farm_chicken_peck', { start: 0, end: 5 }),
+        frameRate: 5,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_chicken_idle') && !this.anims.exists('chicken-idle')) {
+      this.anims.create({
+        key: 'chicken-idle',
+        frames: this.anims.generateFrameNumbers('farm_chicken_idle', { start: 0, end: 7 }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+
+    // Duck
+    if (this.textures.exists('farm_duck_swim') && !this.anims.exists('duck-swim')) {
+      this.anims.create({
+        key: 'duck-swim',
+        frames: this.anims.generateFrameNumbers('farm_duck_swim', { start: 0, end: 5 }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_duck_walk') && !this.anims.exists('duck-walk')) {
+      this.anims.create({
+        key: 'duck-walk',
+        frames: this.anims.generateFrameNumbers('farm_duck_walk', { start: 0, end: 5 }),
+        frameRate: 7,
+        repeat: -1,
+      });
+    }
+
+    // Frog
+    if (this.textures.exists('farm_frog_hop') && !this.anims.exists('frog-hop')) {
+      this.anims.create({
+        key: 'frog-hop',
+        frames: this.anims.generateFrameNumbers('farm_frog_hop', { start: 0, end: 6 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_frog_idle') && !this.anims.exists('frog-idle')) {
+      this.anims.create({
+        key: 'frog-idle',
+        frames: this.anims.generateFrameNumbers('farm_frog_idle', { start: 0, end: 6 }),
+        frameRate: 3,
+        repeat: -1,
+      });
+    }
+
+    // Butterflies
+    if (this.textures.exists('farm_butterfly_blue') && !this.anims.exists('butterfly-blue-fly')) {
+      this.anims.create({
+        key: 'butterfly-blue-fly',
+        frames: this.anims.generateFrameNumbers('farm_butterfly_blue', { start: 0, end: 5 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_butterfly_yellow') && !this.anims.exists('butterfly-yellow-fly')) {
+      this.anims.create({
+        key: 'butterfly-yellow-fly',
+        frames: this.anims.generateFrameNumbers('farm_butterfly_yellow', { start: 0, end: 5 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
 
     // Dog Anims
     if (this.textures.exists('farm_dog_walk') && !this.anims.exists('dog-walk')) {
