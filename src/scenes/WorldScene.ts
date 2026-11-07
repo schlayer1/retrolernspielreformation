@@ -13,6 +13,94 @@ import { CompanionManager } from '../world/Companion';
 import { AtmosphereManager } from '../world/AtmosphereManager';
 import { AmbientSpeechManager } from '../world/AmbientSpeech';
 
+export interface RoomDefinition {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  bgKey: string;
+  entrance: { x: number; y: number };
+  exit: { x: number; y: number };
+  outdoorDoorId: string;
+  outdoorDoor: { x: number; y: number };
+  outdoorWarp: { x: number; y: number };
+}
+
+export const ROOMS: RoomDefinition[] = [
+  {
+    id: 'cranach',
+    name: 'Cranach Hofatelier & Druckerei',
+    x: 118 * 16,
+    y: 12 * 16,
+    w: 384,
+    h: 240,
+    bgKey: 'interior_store_smithy_day',
+    entrance: { x: 125 * 16, y: 24 * 16 },
+    exit: { x: 125 * 16, y: 26 * 16 },
+    outdoorDoorId: 'door_enter_cranach',
+    outdoorDoor: { x: 36 * 16, y: 20 * 16 },
+    outdoorWarp: { x: 36 * 16, y: 22 * 16 },
+  },
+  {
+    id: 'worms',
+    name: 'Kaiserlicher Reichstagssaal zu Worms',
+    x: 156 * 16,
+    y: 12 * 16,
+    w: 416,
+    h: 256,
+    bgKey: 'interior_guild_library_day',
+    entrance: { x: 169 * 16, y: 25 * 16 },
+    exit: { x: 169 * 16, y: 27 * 16 },
+    outdoorDoorId: 'door_enter_worms',
+    outdoorDoor: { x: 80 * 16, y: 20 * 16 },
+    outdoorWarp: { x: 80 * 16, y: 22 * 16 },
+  },
+  {
+    id: 'fugger',
+    name: 'Fuggerpalais Audienzsaal (Augsburg)',
+    x: 117 * 16,
+    y: 47 * 16,
+    w: 416,
+    h: 256,
+    bgKey: 'interior_guild_library_night',
+    entrance: { x: 130 * 16, y: 60 * 16 },
+    exit: { x: 130 * 16, y: 62 * 16 },
+    outdoorDoorId: 'door_enter_fugger',
+    outdoorDoor: { x: 62 * 16, y: 20 * 16 },
+    outdoorWarp: { x: 62 * 16, y: 22 * 16 },
+  },
+  {
+    id: 'wartburg',
+    name: 'Luthers Schreibstube (Wartburg)',
+    x: 158 * 16,
+    y: 47 * 16,
+    w: 384,
+    h: 240,
+    bgKey: 'interior_tavern_night',
+    entrance: { x: 168 * 16, y: 59 * 16 },
+    exit: { x: 168 * 16, y: 61 * 16 },
+    outdoorDoorId: 'door_enter_wartburg',
+    outdoorDoor: { x: 22 * 16, y: 74 * 16 },
+    outdoorWarp: { x: 22 * 16, y: 76 * 16 },
+  },
+  {
+    id: 'kloster',
+    name: 'Refektorium & Kloster-Apotheke',
+    x: 138 * 16,
+    y: 70 * 16,
+    w: 384,
+    h: 240,
+    bgKey: 'interior_tavern_day',
+    entrance: { x: 147 * 16, y: 82 * 16 },
+    exit: { x: 147 * 16, y: 84 * 16 },
+    outdoorDoorId: 'door_enter_kloster',
+    outdoorDoor: { x: 36 * 16, y: 49 * 16 },
+    outdoorWarp: { x: 36 * 16, y: 51 * 16 },
+  },
+];
+
 export interface InteractiveTarget {
   id: string;
   kind: 'mentor' | 'resource' | 'relic' | 'station' | 'companion' | 'door';
@@ -24,7 +112,7 @@ export interface InteractiveTarget {
   itemId?: ReformationItemId;
   relic?: ReformationRelic;
   stationId?: string;
-  warpTarget?: { x: number; y: number; isIndoor: boolean; name: string };
+  warpTarget?: { x: number; y: number; isIndoor: boolean; name: string; roomId?: string };
   questChapter?: number;
   questObjectiveIndex?: number;
   questMessage?: string;
@@ -36,6 +124,7 @@ export interface InteractiveTarget {
 export class WorldScene extends Phaser.Scene {
   public mapW = 196;
   public mapH = 90;
+  public currentRoom: RoomDefinition | null = null;
   public player!: Phaser.GameObjects.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
@@ -48,7 +137,7 @@ export class WorldScene extends Phaser.Scene {
   private spaceKey?: Phaser.Input.Keyboard.Key;
   private enterKey?: Phaser.Input.Keyboard.Key;
 
-  private targets: InteractiveTarget[] = [];
+  public targets: InteractiveTarget[] = [];
   private activeTarget: InteractiveTarget | null = null;
   private labelDiv: HTMLElement | null = null;
 
@@ -68,11 +157,18 @@ export class WorldScene extends Phaser.Scene {
   }
 
   create(): void {
-    // 1. Bake Per-Pixel Multi-Biome Ground with 4x4 Bayer Dithering
+    // 1. Bake Per-Pixel Multi-Biome Ground with 4x4 Bayer Dithering & Sandstone Cobblestones
     this.bakeReformationTerrainTexture();
     this.add.image(0, 0, 'reformation_baked_ground').setOrigin(0, 0).setDepth(0);
 
-    // 2. Initialize Subsystems
+    // 2. Render Authentic 16-Bit Pre-Rendered Room Backdrops in Isolated Coordinate Zones
+    for (const room of ROOMS) {
+      if (this.textures.exists(room.bgKey)) {
+        this.add.image(room.x, room.y, room.bgKey).setOrigin(0, 0).setDepth(2);
+      }
+    }
+
+    // 3. Initialize Subsystems
     this.wildlifeManager = new WildlifeManager(this);
     this.livingWorldManager = new LivingWorldManager(this);
     this.chapterBanner = new ChapterBanner();
@@ -82,16 +178,16 @@ export class WorldScene extends Phaser.Scene {
     this.atmosphereManager.setChapterMood(gameState.chapter);
     this.ambientSpeechManager = new AmbientSpeechManager(this);
 
-    // 3. Dense Ground Flora Scattering
+    // 4. Dense Ground Flora Scattering (Outdoors only)
     this.scatterGroundFlora();
 
-    // 4. Place Static Decor & Architecture
+    // 5. Place Static Decor & Real Architecture Buildings
     this.placeWorldDecor();
 
-    // 5. Place Resource Hotspots
+    // 6. Place Resource Hotspots
     this.placeResourceNodes();
 
-    // 6. Setup Controls
+    // 7. Setup Controls
     if (this.input.keyboard) {
       this.cursors = this.input.keyboard.createCursorKeys();
       this.wasd = {
@@ -105,64 +201,76 @@ export class WorldScene extends Phaser.Scene {
       this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     }
 
-    // 7. Spawn Player
+    // 8. Spawn Player
     this.player = this.add.sprite(gameState.playerX, gameState.playerY, 'character', 0);
     this.player.setOrigin(0.5, 0.9);
     this.player.setScale(1.0);
     this.player.setDepth(this.player.y);
 
-    // 8. Setup Camera
-    this.cameras.main.setBounds(0, 0, this.mapW * 16, this.mapH * 16);
-    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-    this.cameras.main.setZoom(2.2);
+    // 9. Setup Camera Clamping & Room State
+    const startRoom = ROOMS.find(
+      (r) =>
+        this.player.x >= r.x &&
+        this.player.x <= r.x + r.w &&
+        this.player.y >= r.y &&
+        this.player.y <= r.y + r.h
+    );
 
-    // 9. Companion Unlock (Luthers Hund Tölpel)
+    if (startRoom) {
+      this.currentRoom = startRoom;
+      const cam = this.cameras.main;
+      cam.stopFollow();
+      const fitZoom = Math.max(cam.width / startRoom.w, cam.height / startRoom.h);
+      cam.setZoom(fitZoom);
+      cam.centerOn(startRoom.x + startRoom.w / 2, startRoom.y + startRoom.h / 2);
+      cam.setBounds(startRoom.x, startRoom.y, startRoom.w, startRoom.h);
+      sound.setIndoorAcoustics(true);
+    } else {
+      this.currentRoom = null;
+      this.cameras.main.setBounds(0, 0, 96 * 16, 88 * 16);
+      this.cameras.main.setZoom(2.2);
+      this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+      sound.setIndoorAcoustics(false);
+    }
+
+    // 10. Companion Unlock (Luthers Hund Tölpel)
     this.companionManager.unlock(this.player.x - 20, this.player.y);
 
-    // 10. Setup Interactive Targets & Mentors
+    // 11. Setup Interactive Targets, Doors & Mentors
     this.setupTargets();
     this.initInteractionLabel();
 
     // Expose interaction trigger globally for DOM label click & UI scene
     (window as any).__triggerInteraction = () => this.triggerInteraction();
 
-    // 11. Init Wildlife & Living World
+    // 12. Init Wildlife & Living World
     this.wildlifeManager.init();
     this.livingWorldManager.initWaterEffects(48 * 16, 52 * 16, 4 * 16, 76 * 16);
 
-    // 12. Fire & Smoke
-    this.livingWorldManager.registerFireSource(48 * 16, 24 * 16, true, 28, 0xffa533); // Cranach Presse
-    this.livingWorldManager.registerFireSource(26 * 16, 68 * 16, true, 32, 0xff7722); // Wartburg Kamin
-    this.livingWorldManager.registerFireSource(72 * 16, 42 * 16, false, 20, 0xffaa44); // Tetzel Kanzel
-    this.livingWorldManager.registerFireSource(170 * 16, 41 * 16, true, 28, 0xff7722); // Kloster Sudherd
+    // 13. Dynamic Fireplaces, Chimney Smoke & Interior Ambient Animation
+    this.livingWorldManager.registerFireSource(136 * 16, 17 * 16, true, 28, 0xffa533); // Cranach Esse
+    this.livingWorldManager.registerFireSource(163 * 16, 50 * 16, true, 32, 0xff7722); // Wartburg Kamin
+    this.livingWorldManager.registerFireSource(26 * 16, 34 * 16, false, 20, 0xffaa44);  // Tetzel Stand
+    this.livingWorldManager.registerFireSource(143 * 16, 73 * 16, true, 28, 0xff7722); // Kloster Kamin
 
-    // Animated Fireplaces
-    if (this.textures.exists('hearth_fire')) {
-      this.add.sprite(106 * 16, 66 * 16, 'hearth_fire').play('hearth-fire').setDepth(66 * 16 + 1); // Wartburg
-      this.add.sprite(170 * 16, 41 * 16, 'hearth_fire').play('hearth-fire').setDepth(41 * 16 + 1); // Kloster
-    }
-    // Sleeping Dog Tölpel in Wartburg Stube
     if (this.textures.exists('dog_sleeping')) {
-      this.add.sprite(108 * 16, 68 * 16, 'dog_sleeping').play('dog-sleeping-anim').setDepth(68 * 16 + 1);
+      this.add.sprite(163 * 16, 52 * 16, 'dog_sleeping').play('dog-sleeping-anim').setDepth(52 * 16 + 1); // Wartburg
     }
-    // Lit Candles on Desks & Tables
     if (this.textures.exists('candle_lit')) {
-      this.add.sprite(111 * 16 + 8, 68 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(68 * 16 + 2); // Wartburg
-      this.add.sprite(114 * 16 + 8, 18 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(18 * 16 + 2); // Cranach
-      this.add.sprite(143 * 16 + 8, 20 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(20 * 16 + 2); // Worms
-      this.add.sprite(148 * 16 - 8, 68 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(68 * 16 + 2); // Fugger
-      this.add.sprite(175 * 16 - 12, 45 * 16 - 14, 'candle_lit').play('candle-lit-anim').setDepth(45 * 16 + 2); // Kloster
+      this.add.sprite(126 * 16, 16 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(16 * 16 + 2); // Cranach
+      this.add.sprite(169 * 16, 20 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(20 * 16 + 2); // Worms
+      this.add.sprite(137 * 16, 51 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(51 * 16 + 2); // Fugger
+      this.add.sprite(168 * 16, 52 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(52 * 16 + 2); // Wartburg
+      this.add.sprite(147 * 16, 75 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(75 * 16 + 2); // Kloster
     }
-    // Animated Sparkling Gold Coins in Fuggerpalais
     if (this.textures.exists('coin_sparkle')) {
-      this.add.sprite(148 * 16 + 8, 68 * 16 - 8, 'coin_sparkle').play('coin-sparkle-anim').setDepth(68 * 16 + 3);
+      this.add.sprite(137 * 16 + 8, 51 * 16 - 8, 'coin_sparkle').play('coin-sparkle-anim').setDepth(51 * 16 + 3); // Fugger
     }
-    // Animated Boiling Herbal Cauldron in Kloster
     if (this.textures.exists('cauldron')) {
-      this.add.sprite(170 * 16 + 4, 41 * 16 - 4, 'cauldron').play('cauldron-anim').setDepth(41 * 16 + 2);
+      this.add.sprite(143 * 16 + 4, 73 * 16 - 4, 'cauldron').play('cauldron-anim').setDepth(73 * 16 + 2); // Kloster
     }
 
-    // 13. First Chapter Banner
+    // 14. First Chapter Banner
     this.lastBannerChapter = gameState.chapter;
     const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter);
     if (curCh) {
@@ -173,7 +281,7 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    // 14. Start BGM
+    // 15. Start BGM
     sound.startBGM(gameState.chapter);
   }
 
@@ -187,8 +295,8 @@ export class WorldScene extends Phaser.Scene {
     const imgData = ctx.createImageData(W, H);
     const dst = imgData.data;
 
-    // 1. Source Image Data from ground_med_a2 or ground_a2
-    const groundKey = this.textures.exists('ground_med_a2') ? 'ground_med_a2' : 'ground_a2';
+    // 1. Source Image Data from ground_a2 (Authentic SNES medieval autotile sheet)
+    const groundKey = this.textures.exists('ground_a2') ? 'ground_a2' : 'ground_med_a2';
     const srcTex = this.textures.get(groundKey).getSourceImage() as HTMLImageElement;
     const srcCanvas = document.createElement('canvas');
     srcCanvas.width = srcTex.width;
@@ -208,8 +316,7 @@ export class WorldScene extends Phaser.Scene {
     const owData = owctx.getImageData(0, 0, owTex.width, owTex.height).data;
     const oww = owTex.width;
 
-    // In RPG Maker MV A2 (768x576, 8x4 Blöcke à 96x144) liegt die 100% nahtlose
-    // 48x48-Innenkachel jedes Blocks exakt bei (bx*96 + 24, by*144 + 72).
+    // Seamless tile sampling: 48x48 natural pattern sampling without bolt-slab distortions
     const sampleBlock = (bx: number, by: number, x: number, y: number): [number, number, number] => {
       const u = ((x % 48) + 48) % 48;
       const v = ((y % 48) + 48) % 48;
@@ -239,6 +346,21 @@ export class WorldScene extends Phaser.Scene {
       for (let x = 0; x < W; x += 2) {
         const tx = x / 16;
         const ty = y / 16;
+
+        // Solid dark void for all x >= 96 (interior rooms are rendered via pre-rendered backdrops)
+        if (tx >= 96) {
+          for (let py = y; py < y + 2 && py < H; py++) {
+            for (let px = x; px < x + 2 && px < W; px++) {
+              const oi = (py * W + px) * 4;
+              dst[oi] = 12;
+              dst[oi + 1] = 11;
+              dst[oi + 2] = 16;
+              dst[oi + 3] = 255;
+            }
+          }
+          continue;
+        }
+
         const dither = bayer4x4[Math.floor(y / 2) % 4][Math.floor(x / 2) % 4] - 0.5;
 
         // River Elbe curve: tx around 50 + sin wave
@@ -248,39 +370,52 @@ export class WorldScene extends Phaser.Scene {
         // Bridges: Marktbrücke at y: 22..25, Südsteg at y: 56..59
         const isBridge = distRiver < 2.8 && ((ty >= 22 && ty <= 25) || (ty >= 56 && ty <= 59));
 
-        // Roads
-        const dWittenbergRoad = this.distToSegment(tx, ty, 22, 24, 50, 24);
-        const dAugsburgRoad = this.distToSegment(tx, ty, 50, 24, 76, 24);
-        const dWartburgRoad = this.distToSegment(tx, ty, 22, 24, 26, 72);
-        const dPeasantRoad = this.distToSegment(tx, ty, 26, 72, 60, 74);
-        const minRoadDist = Math.min(dWittenbergRoad, dAugsburgRoad, dWartburgRoad, dPeasantRoad);
+        // Medieval Roads & Footpaths
+        const dWittenbergToRiver = this.distToSegment(tx, ty, 24, 24, 50, 24);
+        const dRiverToWorms = this.distToSegment(tx, ty, 50, 24, 80, 22);
+        const dFuggerPath = this.distToSegment(tx, ty, 50, 24, 62, 22);
+        const dSouthRoad = this.distToSegment(tx, ty, 24, 24, 22, 74);
+        const dPeasantRoad = this.distToSegment(tx, ty, 22, 74, 56, 74);
+        const dAugsburg1555 = this.distToSegment(tx, ty, 56, 74, 80, 74);
+        const dKlosterPath = this.distToSegment(tx, ty, 24, 24, 36, 50);
+        const minRoadDist = Math.min(
+          dWittenbergToRiver,
+          dRiverToWorms,
+          dFuggerPath,
+          dSouthRoad,
+          dPeasantRoad,
+          dAugsburg1555,
+          dKlosterPath
+        );
 
-        // Cobblestone plazas: Wittenberg market & Augsburg hall
-        const inWittenbergPlaza = tx >= 16 && tx <= 32 && ty >= 14 && ty <= 30;
-        const inAugsburgPlaza = tx >= 68 && tx <= 84 && ty >= 14 && ty <= 28;
-        const inWartburgCourt = tx >= 20 && tx <= 32 && ty >= 68 && ty <= 82;
+        // Organic medieval plazas with soft dithered boundaries
+        const distWittenberg = Math.hypot((tx - 26) * 0.85, (ty - 22) * 1.0);
+        const inWittenbergPlaza = distWittenberg < 8.5 + dither * 1.2;
 
-        // Interiors (Sub-Maps mit 3-Spalten-Architektur und maximaler Void-Isolation)
-        const inCranachInterior = tx >= 104 && tx <= 118 && ty >= 14 && ty <= 26;
-        const inWartburgInterior = tx >= 104 && tx <= 118 && ty >= 64 && ty <= 76;
-        const inWormsInterior = tx >= 136 && tx <= 150 && ty >= 14 && ty <= 26;
-        const inFuggerInterior = tx >= 136 && tx <= 150 && ty >= 64 && ty <= 76;
-        const inKlosterInterior = tx >= 168 && tx <= 182 && ty >= 39 && ty <= 51;
+        const distCranach = Math.hypot((tx - 38) * 0.9, (ty - 21) * 1.0);
+        const inCranachCourt = distCranach < 5.5 + dither * 1.0;
 
-        const isWall =
-          (inCranachInterior && (tx <= 105 || tx >= 117 || ty <= 15 || ty >= 25)) ||
-          (inWartburgInterior && (tx <= 105 || tx >= 117 || ty <= 65 || ty >= 75)) ||
-          (inWormsInterior && (tx <= 137 || tx >= 149 || ty <= 15 || ty >= 25)) ||
-          (inFuggerInterior && (tx <= 137 || tx >= 149 || ty <= 65 || ty >= 75)) ||
-          (inKlosterInterior && (tx <= 169 || tx >= 181 || ty <= 40 || ty >= 50));
+        const distFugger = Math.hypot((tx - 62) * 0.9, (ty - 21) * 1.0);
+        const inFuggerCourt = distFugger < 5.8 + dither * 1.0;
 
-        const inVoid =
-          tx >= 96 &&
-          !inCranachInterior &&
-          !inWartburgInterior &&
-          !inWormsInterior &&
-          !inFuggerInterior &&
-          !inKlosterInterior;
+        const distWorms = Math.hypot((tx - 80) * 0.85, (ty - 21) * 1.0);
+        const inWormsCourt = distWorms < 7.5 + dither * 1.2;
+
+        const distWartburg = Math.hypot((tx - 22) * 0.85, (ty - 73) * 1.0);
+        const inWartburgCourt = distWartburg < 7.0 + dither * 1.2;
+
+        const distAugsburg1555 = Math.hypot((tx - 80) * 0.85, (ty - 75) * 1.0);
+        const inAugsburg1555Court = distAugsburg1555 < 6.5 + dither * 1.0;
+
+        // Sandstone cobblestones for civic plazas (bx: 3, by: 3 in ground_a2)
+        const isSandstoneCobble =
+          inWittenbergPlaza ||
+          inCranachCourt ||
+          inFuggerCourt ||
+          inAugsburg1555Court;
+
+        // Dark castle stone for fortresses (bx: 2, by: 3 in ground_a2)
+        const isCastleStone = inWormsCourt || inWartburgCourt;
 
         let bx = 1;
         let by = 1;
@@ -294,14 +429,17 @@ export class WorldScene extends Phaser.Scene {
         } else if (distRiver < 2.8 + dither * 0.6) {
           bx = 2; // Sandbank
           by = 1;
-        } else if (inWittenbergPlaza || inAugsburgPlaza || inWartburgCourt) {
-          bx = 1; // Pflasterstein
-          by = 2;
-        } else if (minRoadDist < 1.5 + dither * 0.4) {
-          bx = 1; // Feldweg
+        } else if (isCastleStone) {
+          bx = 2; // Dunkler Burg-Pflasterstein
+          by = 3;
+        } else if (isSandstoneCobble) {
+          bx = 3; // Historischer Sandstein-Pflasterstein (ohne Bolzen)
+          by = 3;
+        } else if (minRoadDist < 1.4 + dither * 0.4) {
+          bx = 1; // Warmer Feldweg
           by = 0;
         } else {
-          // Thüringer Wald & sächsische Auen
+          // Thüringer Wald & sächsische Auen mit natürlicher Dither-Variation
           const wave = Math.sin(x * 0.02 + y * 0.02) * 0.5 + Math.cos(x * 0.015 - y * 0.02) * 0.5;
           if (wave + dither * 0.5 > 0.3) {
             bx = 0; // Waldgras
@@ -315,43 +453,7 @@ export class WorldScene extends Phaser.Scene {
         for (let py = y; py < y + 2 && py < H; py++) {
           for (let px = x; px < x + 2 && px < W; px++) {
             let r: number, g: number, b: number;
-            if (inVoid) {
-              r = 12;
-              g = 11;
-              b = 16;
-            } else if (isWall) {
-              r = 54;
-              g = 44;
-              b = 36;
-            } else if (inWormsInterior) {
-              // Imperial Bürgersaal zu Worms: red carpet runner down center, polished stone around
-              if (tx >= 142 && tx <= 144 && ty >= 16 && ty <= 24) {
-                r = Math.min(255, Math.max(0, Math.round(140 + dither * 16)));
-                g = Math.min(255, Math.max(0, Math.round(36 + dither * 8)));
-                b = Math.min(255, Math.max(0, Math.round(44 + dither * 8)));
-              } else {
-                [r, g, b] = sampleBlock(1, 2, px, py);
-                r = Math.min(255, Math.round(r * 1.2));
-                g = Math.min(255, Math.round(g * 1.18));
-                b = Math.min(255, Math.round(b * 1.22));
-              }
-            } else if (inFuggerInterior) {
-              // Fuggerpalais Augsburg: warm Renaissance terracotta tiles
-              [r, g, b] = sampleBlock(1, 2, px, py);
-              r = Math.min(255, Math.round(r * 1.28));
-              g = Math.min(255, Math.round(g * 1.05));
-              b = Math.min(255, Math.round(b * 0.92));
-            } else if (inKlosterInterior) {
-              // Schwarzes Kloster Refektorium: monastic aged timber planks
-              [r, g, b] = sampleBlock(1, 0, px, py);
-              r = Math.min(255, Math.round(r * 1.08));
-              g = Math.min(255, Math.round(g * 0.98));
-              b = Math.min(255, Math.round(b * 0.88));
-            } else if (inCranachInterior || inWartburgInterior) {
-              [r, g, b] = sampleBlock(1, 0, px, py);
-              r = Math.min(255, Math.round(r * 1.15));
-              g = Math.min(255, Math.round(g * 1.05));
-            } else if (isBridgePlank) {
+            if (isBridgePlank) {
               const plankPattern = (px + (py % 4 === 0 ? 1 : 0)) % 6 === 0 ? 112 : 144;
               r = plankPattern;
               g = Math.round(plankPattern * 0.72);
@@ -385,14 +487,13 @@ export class WorldScene extends Phaser.Scene {
   }
 
   public scatterGroundFlora(): void {
-    const atlas = this.textures.get('world_atlas');
     const floraFrames = ['flower_red', 'flower_blue', 'flower_yellow', 'mushroom_brown', 'grass_tuft', 'pebble_small'];
     const validFrames = floraFrames.filter((f) => this.textures.get('world_atlas')?.has(f));
 
     const count = 140;
     for (let i = 0; i < count; i++) {
-      const tx = Phaser.Math.Between(4, Math.min(94, this.mapW - 5));
-      const ty = Phaser.Math.Between(4, this.mapH - 5);
+      const tx = Phaser.Math.Between(4, 90);
+      const ty = Phaser.Math.Between(4, 82);
       const frameKey = validFrames.length > 0 ? Phaser.Math.RND.pick(validFrames) : undefined;
 
       if (frameKey && this.textures.get('world_atlas')?.has(frameKey)) {
@@ -405,7 +506,7 @@ export class WorldScene extends Phaser.Scene {
   private placeWorldDecor(): void {
     for (const d of REFORMATION_DECOR) {
       if (this.textures.exists(d.spriteKey)) {
-        const sp = this.add.image(d.x, d.y, d.spriteKey).setOrigin(0.5, 0.9).setScale(d.scale || 1.0).setDepth(d.y);
+        this.add.image(d.x, d.y, d.spriteKey).setOrigin(0.5, 0.9).setScale(d.scale || 1.0).setDepth(d.y);
       }
     }
   }
@@ -413,7 +514,7 @@ export class WorldScene extends Phaser.Scene {
   private placeResourceNodes(): void {
     for (const n of RESOURCE_NODES) {
       if (this.textures.exists(n.spriteKey)) {
-        const sp = this.add.image(n.x, n.y, n.spriteKey).setOrigin(0.5, 0.85).setScale(0.85).setDepth(n.y);
+        this.add.image(n.x, n.y, n.spriteKey).setOrigin(0.5, 0.85).setScale(0.85).setDepth(n.y);
         this.livingWorldManager.registerResourceHotspot(n.x, n.y);
       }
     }
@@ -426,7 +527,7 @@ export class WorldScene extends Phaser.Scene {
     for (const ch of REFORMATION_CHAPTERS) {
       const m = ch.mentor;
       if (this.textures.exists(m.spriteKey)) {
-        const sp = this.add.sprite(m.x, m.y, m.spriteKey, 0).setOrigin(0.5, 0.9).setDepth(m.y);
+        this.add.sprite(m.x, m.y, m.spriteKey, 0).setOrigin(0.5, 0.9).setDepth(m.y);
         this.targets.push({
           id: `mentor_${ch.id}`,
           kind: 'mentor',
@@ -510,131 +611,45 @@ export class WorldScene extends Phaser.Scene {
       });
     }
 
-    // 5. Begehbare Innenräume & Warp-Türen (Sub-Maps mit 3-Spalten-Architektur)
-    // Cranach-Hofwerkstatt (Spalte 1 oben)
-    this.targets.push({
-      id: 'door_enter_cranach',
-      kind: 'door',
-      name: 'Cranach Hofatelier & Druckerei',
-      sub: 'Offizin von Meister Lucas Cranach d. Ä.',
-      x: 44 * 16,
-      y: 16 * 16,
-      minChapter: 1,
-      actionTip: '[E] Werkstatt betreten',
-      warpTarget: { x: 110 * 16, y: 24 * 16, isIndoor: true, name: 'Cranachs Werkstatt & Druckerei' },
-    });
+    // 5. Begehbare Innenräume & Warp-Türen
+    for (const room of ROOMS) {
+      // Outdoor entrance door: located directly at building doorstep
+      this.targets.push({
+        id: room.outdoorDoorId,
+        kind: 'door',
+        name: room.name,
+        sub: 'Gebäude betreten',
+        x: room.outdoorDoor.x,
+        y: room.outdoorDoor.y,
+        minChapter: 1,
+        actionTip: '[E] Betreten',
+        warpTarget: {
+          x: room.entrance.x,
+          y: room.entrance.y,
+          isIndoor: true,
+          name: room.name,
+          roomId: room.id,
+        },
+      });
 
-    this.targets.push({
-      id: 'door_exit_cranach',
-      kind: 'door',
-      name: 'Hofportal Wittenberg',
-      sub: 'Hinaus auf den Marktplatz',
-      x: 110 * 16,
-      y: 25 * 16,
-      minChapter: 1,
-      actionTip: '[E] Hinaus auf den Hof',
-      warpTarget: { x: 44 * 16, y: 17 * 16, isIndoor: false, name: 'Wittenberg Hof' },
-    });
-
-    // Wartburg Schreibstube (Spalte 1 unten)
-    this.targets.push({
-      id: 'door_enter_wartburg',
-      kind: 'door',
-      name: 'Wartburg Palas-Pforte',
-      sub: 'Treppe zu Luthers Schreibstube',
-      x: 20 * 16,
-      y: 74 * 16,
-      minChapter: 1,
-      actionTip: '[E] Schreibstube betreten',
-      warpTarget: { x: 110 * 16, y: 74 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' },
-    });
-
-    this.targets.push({
-      id: 'door_exit_wartburg',
-      kind: 'door',
-      name: 'Ausgang zum Burghof',
-      sub: 'Hinaus auf den Schlosshof',
-      x: 110 * 16,
-      y: 75 * 16,
-      minChapter: 1,
-      actionTip: '[E] Hinaus auf den Burghof',
-      warpTarget: { x: 20 * 16, y: 75 * 16, isIndoor: false, name: 'Wartburg Burghof' },
-    });
-
-    // 6. Kaiserlicher Reichstagssaal zu Worms (Spalte 2 oben, Kap. 4)
-    this.targets.push({
-      id: 'door_enter_worms',
-      kind: 'door',
-      name: 'Reichstags-Bürgersaal Portal',
-      sub: 'Eingang zum Kaiserlichen Verhörsaal',
-      x: 74 * 16,
-      y: 16 * 16,
-      minChapter: 1,
-      actionTip: '[E] Reichstag betreten',
-      warpTarget: { x: 143 * 16, y: 24 * 16, isIndoor: true, name: 'Kaiserlicher Reichstagssaal (Worms)' },
-    });
-
-    this.targets.push({
-      id: 'door_exit_worms',
-      kind: 'door',
-      name: 'Ausgang zum Vorplatz',
-      sub: 'Hinaus auf den Vorplatz zu Worms',
-      x: 143 * 16,
-      y: 25 * 16,
-      minChapter: 1,
-      actionTip: '[E] Saal verlassen',
-      warpTarget: { x: 74 * 16, y: 17 * 16, isIndoor: false, name: 'Reichstag Vorplatz (Worms)' },
-    });
-
-    // 7. Fuggerpalais Audienzsaal Augsburg (Spalte 2 unten, Kap. 3)
-    this.targets.push({
-      id: 'door_enter_fugger',
-      kind: 'door',
-      name: 'Fuggerpalais Portal',
-      sub: 'Eingang zum päpstlichen Audienzsaal',
-      x: 62 * 16,
-      y: 13 * 16,
-      minChapter: 1,
-      actionTip: '[E] Fuggerpalais betreten',
-      warpTarget: { x: 143 * 16, y: 74 * 16, isIndoor: true, name: 'Fuggerpalais Audienzsaal (Augsburg)' },
-    });
-
-    this.targets.push({
-      id: 'door_exit_fugger',
-      kind: 'door',
-      name: 'Ausgang zum Hof',
-      sub: 'Hinaus auf den Augsburger Hof',
-      x: 143 * 16,
-      y: 75 * 16,
-      minChapter: 1,
-      actionTip: '[E] Palais verlassen',
-      warpTarget: { x: 62 * 16, y: 14 * 16, isIndoor: false, name: 'Fuggerpalais Hof (Augsburg)' },
-    });
-
-    // 8. Schwarzes Kloster Refektorium & Hausapotheke (Spalte 3 Mitte, Kap. 6)
-    this.targets.push({
-      id: 'door_enter_kloster',
-      kind: 'door',
-      name: 'Lutherhaus Klosterpforte',
-      sub: 'Pforte zu Refektorium & Hausapotheke',
-      x: 38 * 16,
-      y: 50 * 16,
-      minChapter: 1,
-      actionTip: '[E] Kloster betreten',
-      warpTarget: { x: 175 * 16, y: 49 * 16, isIndoor: true, name: 'Refektorium & Kloster-Apotheke' },
-    });
-
-    this.targets.push({
-      id: 'door_exit_kloster',
-      kind: 'door',
-      name: 'Ausgang zum Garten',
-      sub: 'Hinaus in den Kloster-Kräutergarten',
-      x: 175 * 16,
-      y: 50 * 16,
-      minChapter: 1,
-      actionTip: '[E] Kloster verlassen',
-      warpTarget: { x: 38 * 16, y: 52 * 16, isIndoor: false, name: 'Lutherhaus Klostergarten' },
-    });
+      // Indoor exit door: located at room threshold
+      this.targets.push({
+        id: `door_exit_${room.id}`,
+        kind: 'door',
+        name: 'Ausgang nach draußen',
+        sub: 'Hinaus ins Freie',
+        x: room.exit.x,
+        y: room.exit.y,
+        minChapter: 1,
+        actionTip: '[E] Verlassen',
+        warpTarget: {
+          x: room.outdoorWarp.x,
+          y: room.outdoorWarp.y,
+          isIndoor: false,
+          name: 'Vorplatz',
+        },
+      });
+    }
   }
 
   private initInteractionLabel(): void {
@@ -669,8 +684,21 @@ export class WorldScene extends Phaser.Scene {
       vy *= 0.7071;
     }
 
-    const nextX = Phaser.Math.Clamp(this.player.x + (vx * delta) / 1000, 24, this.mapW * 16 - 24);
-    const nextY = Phaser.Math.Clamp(this.player.y + (vy * delta) / 1000, 24, this.mapH * 16 - 24);
+    // Dynamic movement clamping: room boundaries if indoors, world bounds if outdoors
+    let minX = 24;
+    let maxX = 94 * 16;
+    let minY = 24;
+    let maxY = 86 * 16;
+
+    if (this.currentRoom) {
+      minX = this.currentRoom.x + 20;
+      maxX = this.currentRoom.x + this.currentRoom.w - 20;
+      minY = this.currentRoom.y + 36;
+      maxY = this.currentRoom.y + this.currentRoom.h - 14;
+    }
+
+    const nextX = Phaser.Math.Clamp(this.player.x + (vx * delta) / 1000, minX, maxX);
+    const nextY = Phaser.Math.Clamp(this.player.y + (vy * delta) / 1000, minY, maxY);
 
     if (vx !== 0 || vy !== 0) {
       this.player.x = nextX;
@@ -683,12 +711,23 @@ export class WorldScene extends Phaser.Scene {
 
       // Surface detection for footsteps
       let surface: 'stone' | 'dirt' | 'grass' | 'wood' = 'grass';
-      const tx = this.player.x / 16;
-      const ty = this.player.y / 16;
-      if ((tx >= 16 && tx <= 32 && ty >= 14 && ty <= 30) || (tx >= 68 && tx <= 84 && ty >= 14 && ty <= 28)) {
-        surface = 'stone';
-      } else if (tx >= 20 && tx <= 32 && ty >= 68 && ty <= 82) {
+      if (this.currentRoom) {
         surface = 'wood';
+      } else {
+        const tx = this.player.x / 16;
+        const ty = this.player.y / 16;
+        if (
+          Math.hypot((tx - 26) * 0.85, (ty - 22) * 1.0) < 8.5 ||
+          Math.hypot((tx - 38) * 0.9, (ty - 21) * 1.0) < 5.5 ||
+          Math.hypot((tx - 62) * 0.9, (ty - 21) * 1.0) < 5.8 ||
+          Math.hypot((tx - 80) * 0.85, (ty - 21) * 1.0) < 7.5 ||
+          Math.hypot((tx - 22) * 0.85, (ty - 73) * 1.0) < 7.0 ||
+          Math.hypot((tx - 80) * 0.85, (ty - 75) * 1.0) < 6.5
+        ) {
+          surface = 'stone';
+        } else if (ty >= 68 && ty <= 82 && tx >= 48 && tx <= 66) {
+          surface = 'dirt';
+        }
       }
       sound.footstep(surface);
 
@@ -747,6 +786,23 @@ export class WorldScene extends Phaser.Scene {
 
     for (const t of this.targets) {
       if (t.minChapter > gameState.chapter) continue;
+
+      // Filter targets strictly by outdoor/indoor room context
+      const targetIsIndoor = t.x >= 96 * 16;
+      if (this.currentRoom) {
+        if (!targetIsIndoor) continue;
+        if (
+          t.x < this.currentRoom.x ||
+          t.x > this.currentRoom.x + this.currentRoom.w ||
+          t.y < this.currentRoom.y ||
+          t.y > this.currentRoom.y + this.currentRoom.h
+        ) {
+          continue;
+        }
+      } else {
+        if (targetIsIndoor) continue;
+      }
+
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, t.x, t.y);
       if (dist < minDist) {
         minDist = dist;
@@ -802,7 +858,7 @@ export class WorldScene extends Phaser.Scene {
     const cam = this.cameras.main;
     this.tweens.add({
       targets: cam,
-      zoom: 2.7,
+      zoom: this.currentRoom ? 4.2 : 2.7,
       duration: 450,
       ease: 'Cubic.easeInOut',
     });
@@ -810,9 +866,12 @@ export class WorldScene extends Phaser.Scene {
 
   public resetDialogFocus(): void {
     const cam = this.cameras.main;
+    const targetZoom = this.currentRoom
+      ? Math.max(cam.width / this.currentRoom.w, cam.height / this.currentRoom.h)
+      : 2.2;
     this.tweens.add({
       targets: cam,
-      zoom: 2.2,
+      zoom: targetZoom,
       duration: 400,
       ease: 'Cubic.easeInOut',
     });
@@ -866,6 +925,34 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
+    // Smart Cross-Submap Door Routing:
+    if (!this.currentRoom && targetX >= 96 * 16) {
+      // Player is outdoors, but target is inside an interior room
+      const targetRoom = ROOMS.find(
+        (r) => targetX >= r.x && targetX <= r.x + r.w && targetY >= r.y && targetY <= r.y + r.h
+      );
+      if (targetRoom) {
+        targetX = targetRoom.outdoorDoor.x;
+        targetY = targetRoom.outdoorDoor.y;
+        targetName = `Eingang: ${targetRoom.name}`;
+      }
+    } else if (this.currentRoom && targetX < 96 * 16) {
+      // Player is indoors, but target is outdoors
+      targetX = this.currentRoom.exit.x;
+      targetY = this.currentRoom.exit.y;
+      targetName = 'Ausgang nach draußen';
+    } else if (this.currentRoom && targetX >= 96 * 16) {
+      // Target is indoors - check if in different room
+      const targetRoom = ROOMS.find(
+        (r) => targetX >= r.x && targetX <= r.x + r.w && targetY >= r.y && targetY <= r.y + r.h
+      );
+      if (targetRoom && targetRoom.id !== this.currentRoom.id) {
+        targetX = this.currentRoom.exit.x;
+        targetY = this.currentRoom.exit.y;
+        targetName = 'Ausgang nach draußen';
+      }
+    }
+
     const dx = targetX - this.player.x;
     const dy = targetY - this.player.y;
     const distPx = Math.hypot(dx, dy);
@@ -896,7 +983,7 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  public warpTo(target: { x: number; y: number; isIndoor: boolean; name: string }): void {
+  public warpTo(target: { x: number; y: number; isIndoor: boolean; name: string; roomId?: string }): void {
     sound.door();
     const cam = this.cameras.main;
     cam.fadeOut(160, 0, 0, 0);
@@ -909,29 +996,24 @@ export class WorldScene extends Phaser.Scene {
       gameState.playerY = target.y;
 
       if (target.isIndoor) {
-        cam.setZoom(2.8);
-        let rcx = target.x;
-        let rcy = target.y - 48;
-        if (target.x < 125 * 16) {
-          // Spalte 1: Cranach (oben) oder Wartburg (unten)
-          rcx = 111 * 16;
-          rcy = target.y < 50 * 16 ? 20 * 16 : 70 * 16;
-        } else if (target.x < 160 * 16) {
-          // Spalte 2: Worms (oben) oder Fuggerpalais (unten)
-          rcx = 143 * 16;
-          rcy = target.y < 50 * 16 ? 20 * 16 : 70 * 16;
-        } else {
-          // Spalte 3: Schwarzes Kloster Refektorium & Apotheke
-          rcx = 175 * 16;
-          rcy = 45 * 16;
+        const room =
+          ROOMS.find((r) => r.id === target.roomId) ||
+          ROOMS.find(
+            (r) => target.x >= r.x && target.x <= r.x + r.w && target.y >= r.y && target.y <= r.y + r.h
+          );
+        if (room) {
+          this.currentRoom = room;
+          cam.stopFollow();
+          const fitZoom = Math.max(cam.width / room.w, cam.height / room.h);
+          cam.setZoom(fitZoom);
+          cam.centerOn(room.x + room.w / 2, room.y + room.h / 2);
+          cam.setBounds(room.x, room.y, room.w, room.h);
         }
-
-        const viewW = cam.width / cam.zoom;
-        const viewH = cam.height / cam.zoom;
-        cam.setBounds(rcx - viewW / 2, rcy - viewH / 2, viewW, viewH);
       } else {
+        this.currentRoom = null;
+        cam.setBounds(0, 0, 96 * 16, 88 * 16);
         cam.setZoom(2.2);
-        cam.setBounds(0, 0, 96 * 16, this.mapH * 16);
+        cam.startFollow(this.player, true, 0.1, 0.1);
       }
 
       sound.setIndoorAcoustics(target.isIndoor);

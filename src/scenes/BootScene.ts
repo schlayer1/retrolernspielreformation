@@ -14,7 +14,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('Overworld', '/assets/gfx/Overworld.png');
 
     // 2. Main Character Spritesheet (16x32)
-    this.load.spritesheet('character', '/assets/characters/keep_monk.png', {
+    this.load.spritesheet('character', '/assets/characters/keep_squire.png', {
       frameWidth: 48,
       frameHeight: 64,
     });
@@ -68,6 +68,10 @@ export class BootScene extends Phaser.Scene {
       'fortress_gatehouse',
       'fortress_battlement',
       'royal_throne_gold',
+      'gatehouse',
+      'house_tall_slate',
+      'house_gable_tile',
+      'tower_round',
       'stall_red',
       'stall_blue',
       'stall_green',
@@ -89,6 +93,17 @@ export class BootScene extends Phaser.Scene {
       'banner_wall',
       'banner_stand',
       'window_curtains',
+      'interior_guild_library_day',
+      'interior_guild_library_night',
+      'interior_tavern_day',
+      'interior_tavern_night',
+      'interior_alchemist_day',
+      'interior_inn_rooms_day',
+      'interior_store_smithy_day',
+      'house_gable_slate',
+      'statue_king',
+      'flowerbed_gold',
+      'village_stone_well_prop',
     ];
     for (const p of props) {
       this.load.image(p, `/assets/props/${p}.png`);

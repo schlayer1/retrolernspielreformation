@@ -192,7 +192,7 @@ async function main() {
     console.log('11. Capturing Interior Warp (Wartburg-Stube)...');
     await page.evaluate(() => {
       const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 110 * 16, y: 72 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)' });
+      ws.warpTo({ x: 168 * 16, y: 59 * 16, isIndoor: true, name: 'Luthers Schreibstube (Wartburg)', roomId: 'wartburg' });
     });
     await sleep(700);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_11_interior_wartburg.png') });
@@ -216,7 +216,7 @@ async function main() {
     console.log('13. Capturing Interior Warp (Worms Reichstagssaal)...');
     await page.evaluate(() => {
       const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 143 * 16, y: 22 * 16, isIndoor: true, name: 'Kaiserlicher Reichstagssaal (Worms)' });
+      ws.warpTo({ x: 169 * 16, y: 25 * 16, isIndoor: true, name: 'Kaiserlicher Reichstagssaal (Worms)', roomId: 'worms' });
     });
     await sleep(700);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_13_interior_worms.png') });
@@ -226,7 +226,7 @@ async function main() {
     console.log('14. Capturing Interior Warp (Fuggerpalais Audienzsaal)...');
     await page.evaluate(() => {
       const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 143 * 16, y: 72 * 16, isIndoor: true, name: 'Fuggerpalais Audienzsaal (Augsburg)' });
+      ws.warpTo({ x: 130 * 16, y: 60 * 16, isIndoor: true, name: 'Fuggerpalais Audienzsaal (Augsburg)', roomId: 'fugger' });
     });
     await sleep(700);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_14_interior_fugger.png') });
@@ -236,7 +236,7 @@ async function main() {
     console.log('15. Capturing Interior Warp (Schwarzes Kloster Refektorium & Apotheke)...');
     await page.evaluate(() => {
       const ws = (window.__GAME__.scene.getScene('WorldScene'));
-      ws.warpTo({ x: 175 * 16, y: 47 * 16, isIndoor: true, name: 'Refektorium & Kloster-Apotheke' });
+      ws.warpTo({ x: 147 * 16, y: 82 * 16, isIndoor: true, name: 'Refektorium & Kloster-Apotheke', roomId: 'kloster' });
     });
     await sleep(700);
     await page.screenshot({ path: path.join(ARTIFACT_DIR, 'verify_15_interior_kloster.png') });

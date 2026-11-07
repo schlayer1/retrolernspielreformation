@@ -21,104 +21,79 @@ export interface ResourceNode {
 }
 
 export const REFORMATION_DECOR: DecorObject[] = [
-  // Wittenberg Kirche & Marktplatz (Nordwesten: x: 10..30, y: 10..35)
-  { id: 'schlosskirche_portal', name: 'Schlosskirche Wittenberg', x: 18 * 16, y: 10 * 16, spriteKey: 'chapel', scale: 1.0, isObstacle: true },
-  { id: 'wittenberg_brunnen', name: 'Marktbrunnen Wittenberg', x: 26 * 16, y: 26 * 16, spriteKey: 'well', scale: 0.9, isObstacle: true },
-  { id: 'wittenberg_bank', name: 'Sitzbank am Markt', x: 20 * 16, y: 26 * 16, spriteKey: 'bench', scale: 0.9, isObstacle: true },
+  // --- AUSSENWELT (Wittenberg & Heiliges Römisches Reich: 0..96 * 16) ---
+  // 1. Wittenberg Schlossplatz & Markt (Nordwesten: x: 8..52, y: 12..30)
+  { id: 'schlosskirche_portal', name: 'Schlosskirche Allerheiligen', x: 20 * 16, y: 18 * 16, spriteKey: 'chapel', scale: 1.0, isObstacle: true },
+  { id: 'cranach_atelier', name: 'Lucas Cranachs Hofatelier & Druckerei', x: 36 * 16, y: 18 * 16, spriteKey: 'house_tall_slate', scale: 1.0, isObstacle: true },
+  { id: 'wittenberg_haus_ost', name: 'Wittenberger Patrizierhaus', x: 48 * 16, y: 20 * 16, spriteKey: 'house_gable_tile', scale: 1.0, isObstacle: true },
+  { id: 'wittenberg_haus_west', name: 'Kaufmannshaus am Schlossplatz', x: 10 * 16, y: 20 * 16, spriteKey: 'house_gable_slate', scale: 1.0, isObstacle: true },
+  { id: 'wittenberg_brunnen', name: 'Marktbrunnen Wittenberg', x: 26 * 16, y: 24 * 16, spriteKey: 'well', scale: 0.9, isObstacle: true },
+  { id: 'wittenberg_bank', name: 'Sitzbank am Markt', x: 16 * 16, y: 24 * 16, spriteKey: 'bench', scale: 0.9, isObstacle: true },
+  { id: 'cranach_fass_lager', name: 'Firnis- und Druckfarben-Fässer', x: 44 * 16, y: 20 * 16, spriteKey: 'barrel', scale: 0.85, isObstacle: true },
 
-  // Cranach-Werkstatt & Hof (Nord-Mitte: x: 38..52, y: 10..30)
-  { id: 'cranach_atelier', name: 'Cranach Hofatelier', x: 44 * 16, y: 12 * 16, spriteKey: 'cottage_stone', scale: 1.0, isObstacle: true },
-  { id: 'cranach_presse_tisch', name: 'Setzertisch & Pult', x: 48 * 16, y: 24 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 0.9, isObstacle: true },
-  { id: 'cranach_buchpult', name: 'Lesepult & Vorlagen', x: 38 * 16, y: 24 * 16, spriteKey: 'monastery_book_lectern', scale: 0.85, isObstacle: true },
+  // 2. Tetzel Markt vor den Toren Wittenbergs (Mitte-Nord: x: 20..36, y: 32..42)
+  { id: 'tetzel_stand', name: 'Tetzels Ablass-Kanzel & Stand', x: 26 * 16, y: 34 * 16, spriteKey: 'stall_red', scale: 1.0, isObstacle: true },
+  { id: 'tetzel_fass', name: 'Ablassgelder Fässer', x: 26 * 16, y: 38 * 16, spriteKey: 'barrel', scale: 0.85, isObstacle: true },
 
-  // Augsburg & Cajetan (Nordost: x: 58..70, y: 10..30)
-  { id: 'fuggerpalais', name: 'Fuggerpalais Tor', x: 62 * 16, y: 10 * 16, spriteKey: 'fortress_gatehouse', scale: 1.0, isObstacle: true },
-  { id: 'cajetan_thron', name: 'Kardinalsitz', x: 62 * 16, y: 22 * 16, spriteKey: 'royal_throne_gold', scale: 0.85, isObstacle: true },
+  // 3. Augsburg & Fuggerpalais (Nordost: x: 54..68, y: 14..28)
+  { id: 'fuggerpalais', name: 'Fuggerpalais Residenz & Audienzsaal', x: 62 * 16, y: 18 * 16, spriteKey: 'house_gable_tile', scale: 1.0, isObstacle: true },
+  { id: 'fugger_statue', name: 'Kaiser-Denkmal am Fuggerplatz', x: 68 * 16, y: 22 * 16, spriteKey: 'statue_king', scale: 0.9, isObstacle: true },
+  { id: 'fugger_blumen', name: 'Renaissance-Zierbeet', x: 56 * 16, y: 22 * 16, spriteKey: 'flowerbed_gold', scale: 1.0, isObstacle: false },
 
-  // Worms Kaiserpfalz (Ost: x: 72..86, y: 10..32)
-  { id: 'kaiserthron_podest', name: 'Kaiserthron Karl V.', x: 74 * 16, y: 14 * 16, spriteKey: 'royal_throne_gold', scale: 1.1, isObstacle: true },
-  { id: 'worms_zinnen', name: 'Bürgersaal Wehrmauer', x: 80 * 16, y: 12 * 16, spriteKey: 'fortress_battlement', scale: 1.0, isObstacle: true },
+  // 4. Worms Kaiserpfalz & Reichstag (Ost: x: 70..90, y: 14..30)
+  { id: 'kaiserpfalz_worms', name: 'Kaiserliche Pfalz zu Worms (Reichstag)', x: 80 * 16, y: 18 * 16, spriteKey: 'gatehouse', scale: 1.0, isObstacle: true },
+  { id: 'worms_zinnen_links', name: 'Kaiserliche Wehrmauer Links', x: 70 * 16, y: 18 * 16, spriteKey: 'fortress_battlement', scale: 1.0, isObstacle: true },
+  { id: 'worms_zinnen_rechts', name: 'Kaiserliche Wehrmauer Rechts', x: 90 * 16, y: 18 * 16, spriteKey: 'fortress_battlement', scale: 1.0, isObstacle: true },
 
-  // Tetzel Markt vor den Toren (Mitte-Ost: x: 68..80, y: 34..46)
-  { id: 'tetzel_stand', name: 'Tetzels Ablass-Stand', x: 72 * 16, y: 42 * 16, spriteKey: 'stall_red', scale: 1.0, isObstacle: true },
-  { id: 'tetzel_fass', name: 'Ablassgelder Fässer', x: 66 * 16, y: 40 * 16, spriteKey: 'barrel', scale: 0.85, isObstacle: true },
+  // 5. Schwarzes Kloster & Katharina von Bora (West-Mitte: x: 30..48, y: 44..56)
+  { id: 'lutherhaus_gebaeude', name: 'Schwarzes Kloster Konventshaus', x: 36 * 16, y: 46 * 16, spriteKey: 'cottage_stone', scale: 1.0, isObstacle: true },
+  { id: 'kraeutergarten_beet', name: 'Katharinas Heilkräuterbeet', x: 44 * 16, y: 48 * 16, spriteKey: 'monastery_herbal_planter', scale: 1.0, isObstacle: false },
+  { id: 'kloster_brunnen', name: 'Klosterhof-Ziehbrunnen', x: 30 * 16, y: 50 * 16, spriteKey: 'village_stone_well_prop', scale: 0.9, isObstacle: true },
 
-  // Schwarzes Kloster & Katharina von Bora (Südwest: x: 30..48, y: 48..65)
-  { id: 'lutherhaus_gebaeude', name: 'Schwarzes Kloster Konvent', x: 38 * 16, y: 48 * 16, spriteKey: 'cottage_stone', scale: 1.0, isObstacle: true },
-  { id: 'kraeutergarten_beet', name: 'Katharinas Heilkräuterbeet', x: 44 * 16, y: 58 * 16, spriteKey: 'monastery_herbal_planter', scale: 1.0, isObstacle: false },
+  // 6. Veste Wartburg & Junker Jörg (Südwest: x: 14..32, y: 66..84)
+  { id: 'wartburg_burgturm', name: 'Veste Wartburg Palas & Bergfried', x: 22 * 16, y: 70 * 16, spriteKey: 'keep', scale: 1.0, isObstacle: true },
+  { id: 'wartburg_turm_links', name: 'Wartburg Flankierungsturm', x: 12 * 16, y: 72 * 16, spriteKey: 'tower_round', scale: 0.95, isObstacle: true },
 
-  // Wartburg & Junker Jörg (Süd-West: x: 14..32, y: 68..88)
-  { id: 'wartburg_burgturm', name: 'Wartburg Bergfried & Palas', x: 20 * 16, y: 70 * 16, spriteKey: 'keep', scale: 1.1, isObstacle: true },
-  // Bauernkrieg Frankenhausen (Süd-Mitte: x: 50..66, y: 66..88)
-  { id: 'bauern_huette', name: 'Bauernkate Frankenhausen', x: 54 * 16, y: 70 * 16, spriteKey: 'peasant_thatched_cottage', scale: 1.0, isObstacle: true },
-  { id: 'bauern_heuwagen', name: 'Heuwagen & Pflug', x: 52 * 16, y: 80 * 16, spriteKey: 'cart_hay', scale: 0.9, isObstacle: true },
+  // 7. Bauernkrieg Frankenhausen (Süd-Mitte: x: 48..66, y: 68..84)
+  { id: 'bauern_huette', name: 'Bauernkate Frankenhausen', x: 56 * 16, y: 72 * 16, spriteKey: 'peasant_thatched_cottage', scale: 1.0, isObstacle: true },
+  { id: 'bauern_huette_2', name: 'Fachwerk-Scheune', x: 64 * 16, y: 72 * 16, spriteKey: 'cottage_thatch', scale: 0.9, isObstacle: true },
+  { id: 'bauern_heuwagen', name: 'Heuwagen & Pflug', x: 50 * 16, y: 76 * 16, spriteKey: 'cart_hay', scale: 0.9, isObstacle: true },
 
-  // Augsburg Friedenssaal 1555 (Südost: x: 70..88, y: 70..90)
-  { id: 'augsburg_rathaus', name: 'Rathaussaal Augsburg 1555', x: 80 * 16, y: 72 * 16, spriteKey: 'fortress_gatehouse', scale: 1.0, isObstacle: true },
+  // 8. Augsburg Friedenssaal 1555 (Südost: x: 74..88, y: 68..84)
+  { id: 'augsburg_rathaus', name: 'Rathaussaal des Augsburger Religionsfriedens', x: 80 * 16, y: 72 * 16, spriteKey: 'fortress_gatehouse', scale: 1.0, isObstacle: true },
 
-  // --- INTERIEURS (Begehbare Sub-Maps mit großzügigen Void-Schutzzonen) ---
-  // Spalte 1: Cranach-Hofwerkstatt (x: 104..118, y: 14..26)
-  { id: 'cranach_in_bookcase', name: 'Schriftenregal der Werkstatt', x: 106 * 16, y: 16 * 16, spriteKey: 'bookcase', scale: 1.0, isObstacle: true },
-  { id: 'cranach_in_press', name: 'Gutenberg-Druckerpresse', x: 110 * 16, y: 18 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 1.0, isObstacle: true },
-  { id: 'cranach_in_desk', name: 'Meister Cranachs Zeichentisch', x: 114 * 16, y: 18 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 0.9, isObstacle: true },
-  { id: 'cranach_in_books', name: 'Stapel frisch geschöpftes Hadernpapier', x: 106 * 16, y: 22 * 16, spriteKey: 'book_pile', scale: 1.0, isObstacle: true },
-  { id: 'cranach_in_chair', name: 'Setzerstuhl', x: 114 * 16, y: 22 * 16, spriteKey: 'armchair_green', scale: 0.9, isObstacle: true },
+  // --- INNENRÄUME (Historische Interieur-Akzente auf den 16-Bit Raum-Backdrops) ---
+  // Raum 1: Cranach-Hofwerkstatt (x: 118 * 16, y: 12 * 16)
+  { id: 'cranach_in_books', name: 'Stapel geschöpftes Hadernpapier', x: 121 * 16, y: 22 * 16, spriteKey: 'book_pile', scale: 1.0, isObstacle: true },
 
-  // Spalte 1: Wartburg Luthers Schreibstube (x: 104..118, y: 64..76)
-  { id: 'wartburg_in_hearth', name: 'Wärmender Kaminofen', x: 106 * 16, y: 66 * 16, spriteKey: 'hearth', scale: 1.0, isObstacle: true },
-  { id: 'wartburg_in_bookcase', name: 'Bücherregal mit Kirchenvätern', x: 115 * 16, y: 66 * 16, spriteKey: 'bookcase', scale: 1.0, isObstacle: true },
-  { id: 'wartburg_in_desk', name: 'Luthers Bibel-Übersetzungspult', x: 111 * 16, y: 68 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 1.0, isObstacle: true },
-  { id: 'wartburg_in_lectern', name: 'Griechisches Neues Testament (Erasmus)', x: 106 * 16, y: 71 * 16, spriteKey: 'monastery_book_lectern', scale: 0.9, isObstacle: true },
-  { id: 'wartburg_in_chair', name: 'Junker Jörgs Lehnsessel', x: 111 * 16, y: 71 * 16, spriteKey: 'armchair_green', scale: 0.9, isObstacle: true },
+  // Raum 3: Fuggerpalais Audienzsaal (x: 117 * 16, y: 47 * 16)
+  { id: 'fugger_in_lectern', name: 'Päpstliche Bannandrohungsbulle', x: 123 * 16, y: 56 * 16, spriteKey: 'monastery_book_lectern', scale: 0.9, isObstacle: true },
 
-  // Spalte 2: Worms Kaiserlicher Reichstagssaal (x: 136..150, y: 14..26)
-  { id: 'worms_in_throne', name: 'Kaiserthron Karls V.', x: 143 * 16, y: 16 * 16, spriteKey: 'royal_throne_gold', scale: 1.1, isObstacle: true },
-  { id: 'worms_in_armor_l', name: 'Kaiserliche Leibgarde-Rüstung', x: 140 * 16, y: 17 * 16, spriteKey: 'armor_stand', scale: 1.0, isObstacle: true },
-  { id: 'worms_in_armor_r', name: 'Habsburger Hellebardier-Harnisch', x: 146 * 16, y: 17 * 16, spriteKey: 'armor_stand', scale: 1.0, isObstacle: true },
-  { id: 'worms_in_banner_l', name: 'Reichsadler-Banner Links', x: 138 * 16, y: 16 * 16, spriteKey: 'banner_wall', scale: 1.0, isObstacle: true },
-  { id: 'worms_in_banner_r', name: 'Habsburger Wappenbanner Rechts', x: 148 * 16, y: 16 * 16, spriteKey: 'banner_wall', scale: 1.0, isObstacle: true },
-  { id: 'worms_in_table', name: 'Verhör-Büchertisch (Luthers Schriften)', x: 143 * 16, y: 20 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 1.0, isObstacle: true },
-  { id: 'worms_in_books', name: 'Verdammte Streitschriften', x: 140 * 16, y: 21 * 16, spriteKey: 'book_pile', scale: 1.0, isObstacle: true },
-  { id: 'worms_in_bench', name: 'Bank der Kurfürsten', x: 146 * 16, y: 21 * 16, spriteKey: 'bench_stone', scale: 0.9, isObstacle: true },
+  // Raum 4: Wartburg Luthers Schreibstube (x: 158 * 16, y: 47 * 16)
+  { id: 'wartburg_in_lectern', name: 'Griechisches Neues Testament (Erasmus)', x: 163 * 16, y: 56 * 16, spriteKey: 'monastery_book_lectern', scale: 0.9, isObstacle: true },
 
-  // Spalte 2: Fuggerpalais Audienzsaal Augsburg (x: 136..150, y: 64..76)
-  { id: 'fugger_in_throne', name: 'Kardinalsthron Cajetans', x: 143 * 16, y: 66 * 16, spriteKey: 'royal_throne_gold', scale: 1.0, isObstacle: true },
-  { id: 'fugger_in_curtains_l', name: 'Samtvorhang Fensternische Links', x: 140 * 16, y: 65 * 16, spriteKey: 'window_curtains', scale: 1.0, isObstacle: true },
-  { id: 'fugger_in_curtains_r', name: 'Samtvorhang Fensternische Rechts', x: 146 * 16, y: 65 * 16, spriteKey: 'window_curtains', scale: 1.0, isObstacle: true },
-  { id: 'fugger_in_bookcase', name: 'Bibliothek des Kanonischen Rechts', x: 138 * 16, y: 67 * 16, spriteKey: 'bookcase', scale: 1.0, isObstacle: true },
-  { id: 'fugger_in_lectern', name: 'Päpstliche Bannandrohungsbulle (Exsurge Domine)', x: 138 * 16, y: 71 * 16, spriteKey: 'monastery_book_lectern', scale: 0.9, isObstacle: true },
-  { id: 'fugger_in_desk', name: 'Fugger-Bankiertisch mit Golddukatoren', x: 148 * 16, y: 68 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 0.9, isObstacle: true },
-  { id: 'fugger_in_chair', name: 'Prunk-Lehnsessel', x: 148 * 16, y: 72 * 16, spriteKey: 'armchair_green', scale: 0.9, isObstacle: true },
-  { id: 'fugger_in_banner', name: 'Fugger-Wappenstandarte', x: 149 * 16, y: 65 * 16, spriteKey: 'banner_stand', scale: 0.85, isObstacle: true },
-
-  // Spalte 3: Schwarzes Kloster Wittenberg - Refektorium & Apotheke (x: 168..182, y: 39..51)
-  { id: 'kloster_in_hearth', name: 'Kloster-Feuerstelle & Sudkessel', x: 170 * 16, y: 41 * 16, spriteKey: 'hearth', scale: 1.0, isObstacle: true },
-  { id: 'kloster_in_table', name: 'Tischreden-Eichentafel', x: 175 * 16, y: 45 * 16, spriteKey: 'monastery_scriptorium_desk', scale: 1.0, isObstacle: true },
-  { id: 'kloster_in_bench', name: 'Gäste-Sitzbank für Studenten', x: 175 * 16, y: 48 * 16, spriteKey: 'bench', scale: 0.9, isObstacle: true },
-  { id: 'kloster_in_barrel_1', name: 'Wittenberger Klosterbier-Fass', x: 170 * 16, y: 47 * 16, spriteKey: 'barrel', scale: 0.9, isObstacle: true },
-  { id: 'kloster_in_barrel_2', name: 'Brau- und Vorratsfass', x: 171 * 16, y: 49 * 16, spriteKey: 'barrel', scale: 0.85, isObstacle: true },
-  { id: 'kloster_in_herbs', name: 'Katharinas Arzneikräuter-Trog', x: 180 * 16, y: 42 * 16, spriteKey: 'monastery_herbal_planter', scale: 0.9, isObstacle: true },
-  { id: 'kloster_in_bookcase', name: 'Arzneibuch & Klosterapotheken-Register', x: 180 * 16, y: 46 * 16, spriteKey: 'bookcase_narrow', scale: 1.0, isObstacle: true },
+  // Raum 5: Schwarzes Kloster Refektorium & Hauswirtschaft (x: 138 * 16, y: 70 * 16)
+  { id: 'kloster_in_herbs', name: 'Katharinas Arzneikräuter-Trog', x: 157 * 16, y: 78 * 16, spriteKey: 'monastery_herbal_planter', scale: 0.9, isObstacle: true },
 ];
 
 export const RESOURCE_NODES: ResourceNode[] = [
   {
     id: 'node_pergament',
     name: 'Pergamentrollen-Kiste',
-    x: 40 * 16,
-    y: 18 * 16,
-    spriteKey: 'keep_guard',
+    x: 32 * 16,
+    y: 24 * 16,
+    spriteKey: 'crates',
     lootItem: 'pergament',
     lootCount: 1,
     respawnSeconds: 20,
-    description: 'Frisches Pergament aus der Kanzlei für Handschriften und Entwürfe.',
+    description: 'Frisches Hadernpergament aus der Kanzlei für Handschriften und Entwürfe.',
   },
   {
     id: 'node_lettern',
     name: 'Lettern-Gusskasten',
-    x: 48 * 16,
-    y: 18 * 16,
-    spriteKey: 'keep_guard',
+    x: 42 * 16,
+    y: 25 * 16,
+    spriteKey: 'crates',
     lootItem: 'bleilettern',
     lootCount: 2,
     respawnSeconds: 15,
@@ -128,22 +103,22 @@ export const RESOURCE_NODES: ResourceNode[] = [
     id: 'node_kraeuter',
     name: 'Katharinas Heilkräuterbeet',
     x: 44 * 16,
-    y: 62 * 16,
+    y: 53 * 16,
     spriteKey: 'dirt_hoed',
     lootItem: 'heilkräuter',
     lootCount: 3,
     respawnSeconds: 25,
-    description: 'Duftende Kräuter für Arznei und Hausapotheke.',
+    description: 'Duftende Kräuter für Arznei und die Hausapotheke des Klosters.',
   },
   {
     id: 'node_holz',
     name: 'Holzscheit-Stapel',
     x: 30 * 16,
-    y: 80 * 16,
-    spriteKey: 'keep_noble',
+    y: 78 * 16,
+    spriteKey: 'crates',
     lootItem: 'holz',
     lootCount: 2,
     respawnSeconds: 15,
-    description: 'Trockenes Buchenholz für den Ofen der Lutherstube.',
+    description: 'Trockenes Buchenholz für den Ofen der Wartburg-Stube.',
   },
 ];
