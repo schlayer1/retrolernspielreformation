@@ -142,6 +142,19 @@ export class LivingWorldManager {
     });
   }
 
+  // 6. NPC & MENTOR BREATHING ANIMATION (Steinzeit Benchmark)
+  public registerMentor(sprite: Phaser.GameObjects.Sprite | null): void {
+    if (!sprite) return;
+    this.scene.tweens.add({
+      targets: sprite,
+      scaleY: { from: 0.97, to: 1.03 },
+      duration: 1300 + Math.random() * 400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
   public update(delta: number): void {
     this.smokeTimer += delta;
     this.waterTimer += delta;

@@ -544,7 +544,18 @@ export class WorldScene extends Phaser.Scene {
       const riverCenter = 50 + Math.sin(ty * 0.08) * 3.5;
       if (Math.abs(tx - riverCenter) < 2.0) continue;
 
+      // Do not scatter directly on top of mentors (< 2.5 tiles)
+      const nearMentor = REFORMATION_CHAPTERS.some(
+        (c) => Math.hypot(tx - c.mentor.x / 16, ty - c.mentor.y / 16) < 2.5
+      );
+      if (nearMentor) continue;
+
+      // Do not scatter tall flora on the paved Wittenberg marketplace square (x: 14..36, y: 18..28)
+      const isPavedSquare = tx >= 14 && tx <= 36 && ty >= 18 && ty <= 28;
       const frameKey = validFrames.length > 0 ? Phaser.Math.RND.pick(validFrames) : undefined;
+      if (isPavedSquare && frameKey && !frameKey.startsWith('pebbles') && !frameKey.startsWith('grass_s')) {
+        continue;
+      }
 
       if (frameKey && this.textures.get('world_atlas')?.has(frameKey)) {
         const flora = this.add.image(tx * 16, ty * 16, 'world_atlas', frameKey).setOrigin(0.5, 0.8).setDepth(ty * 16 - 2);
@@ -595,9 +606,19 @@ export class WorldScene extends Phaser.Scene {
       { x: 6, y: 14, frame: 'tree_oak_2', isFlora: true },
       { x: 6, y: 22, frame: 'tree_small_1', isFlora: true },
       { x: 6, y: 28, frame: 'tree_small_2', isFlora: true },
+      { x: 12, y: 15, frame: 'tree_small_1', isFlora: true },
+      { x: 28, y: 16, frame: 'tree_small_2', isFlora: true },
+      { x: 44, y: 15, frame: 'tree_apple', isFlora: true },
+      { x: 30, y: 33, frame: 'tree_willow', isFlora: true },
+      { x: 42, y: 33, frame: 'tree_willow', isFlora: true },
       { x: 14, y: 28, frame: 'bush_berry_red', isFlora: true },
       { x: 32, y: 22, frame: 'bush_big_green', isFlora: true },
       { x: 42, y: 22, frame: 'bush_berry_blue', isFlora: true },
+      { x: 18, y: 23, frame: 'bush_berry_red', isFlora: true },
+      { x: 34, y: 24, frame: 'bush_berry_orange', isFlora: true },
+      { x: 22, y: 25, frame: 'pebbles_a' },
+      { x: 26, y: 26, frame: 'pebbles_b' },
+      { x: 30, y: 24, frame: 'pebbles_c' },
 
       // 3. River Elbe & Mulde Weeping Willows (along banks)
       { x: 45, y: 12, frame: 'tree_willow', isFlora: true },
@@ -686,11 +707,15 @@ export class WorldScene extends Phaser.Scene {
   private setupTargets(): void {
     this.targets = [];
 
-    // 1. Mentors aus chapters.ts
+    // 1. Mentors aus chapters.ts (16x32 native Sprites mit Atemanimation)
     for (const ch of REFORMATION_CHAPTERS) {
       const m = ch.mentor;
       if (this.textures.exists(m.spriteKey)) {
-        this.add.sprite(m.x, m.y, m.spriteKey, 0).setOrigin(0.5, 0.9).setDepth(m.y);
+        const spr = this.add.sprite(m.x, m.y, m.spriteKey, 0)
+          .setOrigin(0.5, 0.9)
+          .setScale(1.0)
+          .setDepth(m.y + 12);
+        this.livingWorldManager.registerMentor(spr);
         this.targets.push({
           id: `mentor_${ch.id}`,
           kind: 'mentor',

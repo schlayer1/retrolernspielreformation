@@ -15,44 +15,32 @@ export class BootScene extends Phaser.Scene {
     this.load.image('cliffs_desert', '/assets/world/cliffs_desert.png');
     this.load.image('Overworld', '/assets/gfx/Overworld.png');
 
-    // 2. Main Character Spritesheets (48x64 standard 16-bit Keep Characters)
-    this.load.spritesheet('character', '/assets/characters/keep_squire.png', {
-      frameWidth: 48,
-      frameHeight: 64,
-    });
-    this.load.spritesheet('character_female', '/assets/characters/keep_peasant_f.png', {
-      frameWidth: 48,
-      frameHeight: 64,
+    // 2. Main Character Spritesheet (Strict 16x32 Steinzeit-Benchmark Standard)
+    this.load.spritesheet('character', '/assets/gfx/character.png', {
+      frameWidth: 16,
+      frameHeight: 32,
     });
 
-    // 3. Keep Characters (48x64)
-    const chars = [
-      'keep_monk',
-      'keep_noble',
-      'keep_king',
-      'keep_guard',
-      'keep_captain',
-      'keep_merchant',
-      'keep_farmer',
+    // 3. Mentors & Historical Figures (16x32 Native Pixel Art Sheets)
+    const mentorIds = [
+      'npc_luther',
+      'npc_cranach',
+      'npc_cajetan',
+      'npc_karl_v',
+      'npc_junker_joerg',
+      'npc_katharina',
+      'npc_muentzer',
+      'npc_friedrich',
+      'npc_guard',
     ];
-    for (const c of chars) {
-      this.load.spritesheet(c, `/assets/characters/${c}.png`, {
-        frameWidth: 48,
-        frameHeight: 64,
+    for (const id of mentorIds) {
+      this.load.spritesheet(id, `/assets/gfx/npcs/${id}.png`, {
+        frameWidth: 16,
+        frameHeight: 32,
       });
     }
 
-    // 4. Strip animations
-    this.load.spritesheet('farm_baker_walk_down_strip', '/assets/characters/farm_baker_walk_down_strip.png', {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-    this.load.spritesheet('farm_farmer_girl_idle_down_strip', '/assets/characters/farm_farmer_girl_idle_down_strip.png', {
-      frameWidth: 32,
-      frameHeight: 32,
-    });
-
-    // 5. Fauna & Companion (16-Bit Living World Strips & Sheets)
+    // 4. Fauna & Companion (16-Bit Living World Strips & Sheets)
     this.load.spritesheet('farm_dog_walk', '/assets/fauna/farm_dog_walk_strip.png', {
       frameWidth: 26,
       frameHeight: 21,
@@ -60,6 +48,22 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('farm_dog_idle', '/assets/fauna/farm_dog_idle_strip.png', {
       frameWidth: 26,
       frameHeight: 21,
+    });
+    this.load.spritesheet('farm_cat_walk', '/assets/fauna/farm_cat_walk_strip.png', {
+      frameWidth: 22,
+      frameHeight: 21,
+    });
+    this.load.spritesheet('farm_cat_idle', '/assets/fauna/farm_cat_idle_strip.png', {
+      frameWidth: 22,
+      frameHeight: 21,
+    });
+    this.load.spritesheet('pigeon_peck', '/assets/fauna/cafe_pigeon_pecking_strip.png', {
+      frameWidth: 16,
+      frameHeight: 11,
+    });
+    this.load.spritesheet('pigeon_white_peck', '/assets/fauna/cafe_pigeon_white_pecking_strip.png', {
+      frameWidth: 16,
+      frameHeight: 11,
     });
     this.load.spritesheet('farm_horse_walk', '/assets/fauna/farm_horse_walk_strip.png', {
       frameWidth: 46,
@@ -141,15 +145,12 @@ export class BootScene extends Phaser.Scene {
       frameWidth: 16,
       frameHeight: 13,
     });
-    this.load.spritesheet('cow_brown', '/assets/fauna/cow_brown.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('calf_brown', '/assets/fauna/calf_brown.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('horse', '/assets/fauna/horse.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('sheep', '/assets/fauna/sheep.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('sheep_baby', '/assets/fauna/sheep_baby.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('chicken_brown', '/assets/fauna/chicken_brown.png', { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet('chick_dark', '/assets/fauna/chick_dark.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('farm_butterfly_pink', '/assets/fauna/farm_butterfly_pink_strip.png', {
+      frameWidth: 16,
+      frameHeight: 13,
+    });
 
-    // 6. Real 16-Bit Props & Architecture
+    // 5. Authentic 16-Bit Props, Buildings & Town Architecture
     const props = [
       'chapel',
       'well',
@@ -176,7 +177,12 @@ export class BootScene extends Phaser.Scene {
       'bench',
       'bench_stone',
       'barrel',
+      'barrel_apples',
+      'barrel_water',
       'crates',
+      'crate_big',
+      'crate_apples',
+      'crate_cabbage',
       'hearth',
       'bookcase',
       'bookcase_narrow',
@@ -197,13 +203,23 @@ export class BootScene extends Phaser.Scene {
       'house_gable_slate',
       'statue_king',
       'flowerbed_gold',
+      'flowerbed_blue',
+      'flowerbed_red',
+      'flowerbed_violet',
+      'lantern_post',
+      'lantern_post_double',
       'village_stone_well_prop',
+      'sign_shop',
+      'sign_inn',
+      'sign_smith',
+      'signpost',
+      'keep_market',
     ];
     for (const p of props) {
       this.load.image(p, `/assets/props/${p}.png`);
     }
 
-    // 7. Interior Animated Strips
+    // 6. Interior Animated Strips
     this.load.spritesheet('hearth_fire', '/assets/animations/hearth_fire_strip.png', {
       frameWidth: 48,
       frameHeight: 44,
@@ -225,7 +241,7 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 26,
     });
 
-    // 8. Relic icons
+    // 7. Relic icons
     this.load.image('relic_marker_glow', '/assets/icons/relic_marker_glow.png');
     this.load.image('relic_codex', '/assets/icons/relic_codex.png');
     this.load.image('relic_lehnsurkunde', '/assets/icons/relic_lehnsurkunde.png');
@@ -233,14 +249,79 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.createFemaleCharacterSheet();
     this.createAnimations();
     this.extractPreviewImages();
     this.scene.start('WorldScene');
     this.scene.start('UIScene');
   }
 
+  /**
+   * Erzeugt aus dem 16x32 Charakter-Spritesheet eine unterscheidbare weibliche Spielfigur
+   * (Steinzeit-Benchmark: türkis-blaues Gewand, längere Haare/Zöpfe und goldenes Stirnband).
+   */
+  private createFemaleCharacterSheet(): void {
+    const src = this.textures.get('character').getSourceImage() as HTMLImageElement;
+    const w = src.width;
+    const h = src.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(src, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    // Rote Tunika-Pixel in ein warmes Renaissance-Türkis-Blau umfärben
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i];
+      const g = d[i + 1];
+      const b = d[i + 2];
+      const a = d[i + 3];
+      if (a > 128 && r > 130 && r > g * 1.45 && r > b * 1.45) {
+        d[i] = Math.min(255, Math.round(b * 0.9 + 25));
+        d[i + 1] = Math.min(255, Math.round(r * 0.68));
+        d[i + 2] = Math.min(255, Math.round(r * 1.05));
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Für die 4 Lauf-Reihen (down=0, right=1, up=2, left=3) je Frame lange Zöpfe & Stirnband ergänzen
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const fx = col * 16;
+        const fy = row * 32;
+        // Goldenes Stirnband / Kanzleihaarschmuck
+        ctx.fillStyle = '#f2c94c';
+        ctx.fillRect(fx + 5, fy + 9, 6, 1);
+        // Kastanienbraune Zöpfe über die Schultern
+        ctx.fillStyle = '#5a3420';
+        if (row === 0 || row === 2) {
+          ctx.fillRect(fx + 2, fy + 14, 2, 6);
+          ctx.fillRect(fx + 12, fy + 14, 2, 6);
+          ctx.fillStyle = '#f2c94c';
+          ctx.fillRect(fx + 2, fy + 19, 1, 1);
+          ctx.fillRect(fx + 13, fy + 19, 1, 1);
+        } else if (row === 1) {
+          ctx.fillRect(fx + 2, fy + 13, 2, 7);
+          ctx.fillStyle = '#f2c94c';
+          ctx.fillRect(fx + 2, fy + 19, 1, 1);
+        } else if (row === 3) {
+          ctx.fillRect(fx + 12, fy + 13, 2, 7);
+          ctx.fillStyle = '#f2c94c';
+          ctx.fillRect(fx + 13, fy + 19, 1, 1);
+        }
+      }
+    }
+
+    this.textures.addSpriteSheet('character_female', canvas as unknown as HTMLImageElement, {
+      frameWidth: 16,
+      frameHeight: 32,
+    });
+  }
+
   private extractPreviewImages(): void {
-    const toDataUrl = (texKey: string, sx = 12, sy = 6, sw = 24, sh = 48): string => {
+    const toDataUrl = (texKey: string, sx = 0, sy = 6, sw = 16, sh = 26): string => {
       try {
         const src = this.textures.get(texKey).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
         const c = document.createElement('canvas');
@@ -255,108 +336,158 @@ export class BootScene extends Phaser.Scene {
       }
     };
 
-    gameState.malePreviewUrl = toDataUrl('character', 12, 6, 24, 48);
-    gameState.femalePreviewUrl = toDataUrl('character_female', 12, 6, 24, 48) || gameState.malePreviewUrl;
+    gameState.malePreviewUrl = toDataUrl('character', 0, 6, 16, 26);
+    gameState.femalePreviewUrl = toDataUrl('character_female', 0, 6, 16, 26) || gameState.malePreviewUrl;
   }
 
   private createAnimations(): void {
-    // 48x64 Standard 16-Bit Keep Player Animations
-    // Row 0: Idle Down (f0)
-    // Row 1: Idle Up (f6)
-    // Row 2: Idle Right (f12)
-    // Row 3: Idle Left (f18)
-    // Row 4: Walk Down (f24..29)
-    // Row 5: Walk Up (f30..35)
-    // Row 6: Walk Right (f36..41)
-    // Row 7: Walk Left (f42..47)
-    const charConfigs = [
-      { name: 'down', walkStart: 24, walkEnd: 29, idleFrame: 0 },
-      { name: 'up', walkStart: 30, walkEnd: 35, idleFrame: 6 },
-      { name: 'right', walkStart: 36, walkEnd: 41, idleFrame: 12 },
-      { name: 'left', walkStart: 42, walkEnd: 47, idleFrame: 18 },
-    ];
+    // ----------------------------------------------------
+    // 1. Spielfigur 16x32 (Steinzeit-Benchmark: 17 Spalten x 8 Zeilen)
+    // ----------------------------------------------------
+    const dirs = ['down', 'right', 'up', 'left'];
+    dirs.forEach((dir, row) => {
+      const start = row * 17;
 
-    charConfigs.forEach(({ name, walkStart, walkEnd, idleFrame }) => {
-      // Male / default
-      if (!this.anims.exists(`walk-${name}`)) {
-        this.anims.create({
-          key: `walk-${name}`,
-          frames: this.anims.generateFrameNumbers('character', { start: walkStart, end: walkEnd }),
-          frameRate: 8,
-          repeat: -1,
-        });
-      }
-      if (!this.anims.exists(`walk-male-${name}`)) {
-        this.anims.create({
-          key: `walk-male-${name}`,
-          frames: this.anims.generateFrameNumbers('character', { start: walkStart, end: walkEnd }),
-          frameRate: 8,
-          repeat: -1,
-        });
-      }
-      if (!this.anims.exists(`idle-male-${name}`)) {
-        this.anims.create({
-          key: `idle-male-${name}`,
-          frames: [{ key: 'character', frame: idleFrame }],
-          frameRate: 1,
-        });
-      }
-      if (!this.anims.exists(`idle-${name}`)) {
-        this.anims.create({
-          key: `idle-${name}`,
-          frames: [{ key: 'character', frame: idleFrame }],
-          frameRate: 1,
-        });
-      }
+      // Male animations & default fallbacks
+      this.anims.create({
+        key: `walk-male-${dir}`,
+        frames: this.anims.generateFrameNumbers('character', { start, end: start + 3 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: `idle-male-${dir}`,
+        frames: [{ key: 'character', frame: start }],
+        frameRate: 1,
+      });
+      this.anims.create({
+        key: `walk-${dir}`,
+        frames: this.anims.generateFrameNumbers('character', { start, end: start + 3 }),
+        frameRate: 8,
+        repeat: -1,
+      });
+      this.anims.create({
+        key: `idle-${dir}`,
+        frames: [{ key: 'character', frame: start }],
+        frameRate: 1,
+      });
 
-      // Female
+      // Female animations
       if (this.textures.exists('character_female')) {
-        if (!this.anims.exists(`walk-female-${name}`)) {
-          this.anims.create({
-            key: `walk-female-${name}`,
-            frames: this.anims.generateFrameNumbers('character_female', { start: walkStart, end: walkEnd }),
-            frameRate: 8,
-            repeat: -1,
-          });
-        }
-        if (!this.anims.exists(`idle-female-${name}`)) {
-          this.anims.create({
-            key: `idle-female-${name}`,
-            frames: [{ key: 'character_female', frame: idleFrame }],
-            frameRate: 1,
-          });
-        }
+        this.anims.create({
+          key: `walk-female-${dir}`,
+          frames: this.anims.generateFrameNumbers('character_female', { start, end: start + 3 }),
+          frameRate: 8,
+          repeat: -1,
+        });
+        this.anims.create({
+          key: `idle-female-${dir}`,
+          frames: [{ key: 'character_female', frame: start }],
+          frameRate: 1,
+        });
       }
     });
 
-    // NPC keep characters: walk-down and idle
-    const npcKeepList = ['keep_monk', 'keep_noble', 'keep_king', 'keep_guard', 'keep_captain', 'keep_merchant', 'keep_farmer'];
-    npcKeepList.forEach((k) => {
-      if (this.textures.exists(k)) {
-        if (!this.anims.exists(`${k}-walk-down`)) {
+    // ----------------------------------------------------
+    // 2. Mentoren & Historische Persönlichkeiten (16x32)
+    // ----------------------------------------------------
+    // 272x256 Sheets (17 Spalten pro Zeile)
+    const wideNpcs = ['npc_luther', 'npc_junker_joerg'];
+    wideNpcs.forEach((id) => {
+      if (this.textures.exists(id)) {
+        dirs.forEach((dir, row) => {
+          const start = row * 17;
           this.anims.create({
-            key: `${k}-walk-down`,
-            frames: this.anims.generateFrameNumbers(k, { start: 24, end: 29 }),
+            key: `${id}-walk-${dir}`,
+            frames: this.anims.generateFrameNumbers(id, { start, end: start + 3 }),
             frameRate: 6,
             repeat: -1,
           });
-        }
-        if (!this.anims.exists(`${k}-idle-down`)) {
           this.anims.create({
-            key: `${k}-idle-down`,
-            frames: [{ key: k, frame: 0 }],
+            key: `${id}-idle-${dir}`,
+            frames: [{ key: id, frame: start }],
             frameRate: 1,
           });
-        }
+        });
+        this.anims.create({
+          key: `${id}-idle`,
+          frames: [{ key: id, frame: 0 }],
+          frameRate: 1,
+        });
       }
     });
 
-    // Dog Anims
+    // 64x128 Sheets (4 Spalten x 4 Zeilen: 0=down, 4=right, 8=up, 12=left)
+    const standardNpcs = ['npc_cranach', 'npc_cajetan', 'npc_karl_v', 'npc_katharina', 'npc_muentzer', 'npc_friedrich', 'npc_guard'];
+    standardNpcs.forEach((id) => {
+      if (this.textures.exists(id)) {
+        dirs.forEach((dir, row) => {
+          const start = row * 4;
+          this.anims.create({
+            key: `${id}-walk-${dir}`,
+            frames: this.anims.generateFrameNumbers(id, { start, end: start + 3 }),
+            frameRate: 6,
+            repeat: -1,
+          });
+          this.anims.create({
+            key: `${id}-idle-${dir}`,
+            frames: [{ key: id, frame: start }],
+            frameRate: 1,
+          });
+        });
+        this.anims.create({
+          key: `${id}-idle`,
+          frames: [{ key: id, frame: 0 }],
+          frameRate: 1,
+        });
+      }
+    });
+
+    // ----------------------------------------------------
+    // 3. Fauna & Tier-Animationen
+    // ----------------------------------------------------
+    // Stadt-Tauben (Marktplatz Wittenberg)
+    if (this.textures.exists('pigeon_peck')) {
+      this.anims.create({
+        key: 'pigeon-peck',
+        frames: this.anims.generateFrameNumbers('pigeon_peck', { start: 0, end: 12 }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('pigeon_white_peck')) {
+      this.anims.create({
+        key: 'pigeon-white-peck',
+        frames: this.anims.generateFrameNumbers('pigeon_white_peck', { start: 0, end: 12 }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    // Hofkatzen
+    if (this.textures.exists('farm_cat_idle')) {
+      this.anims.create({
+        key: 'cat-idle',
+        frames: this.anims.generateFrameNumbers('farm_cat_idle', { start: 0, end: 7 }),
+        frameRate: 4,
+        repeat: -1,
+      });
+    }
+    if (this.textures.exists('farm_cat_walk')) {
+      this.anims.create({
+        key: 'cat-walk',
+        frames: this.anims.generateFrameNumbers('farm_cat_walk', { start: 0, end: 5 }),
+        frameRate: 6,
+        repeat: -1,
+      });
+    }
+
+    // Hofhund
     if (this.textures.exists('farm_dog_walk') && !this.anims.exists('dog-walk')) {
       this.anims.create({
         key: 'dog-walk',
         frames: this.anims.generateFrameNumbers('farm_dog_walk', { start: 0, end: 5 }),
-        frameRate: 10,
+        frameRate: 8,
         repeat: -1,
       });
     }
@@ -369,8 +500,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Fauna Animations
-    // Horse
+    // Pferd
     if (this.textures.exists('farm_horse_walk') && !this.anims.exists('horse-walk')) {
       this.anims.create({
         key: 'horse-walk',
@@ -396,7 +526,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Cow
+    // Kuh
     if (this.textures.exists('farm_cow_walk') && !this.anims.exists('cow-walk')) {
       this.anims.create({
         key: 'cow-walk',
@@ -422,7 +552,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Sheep
+    // Schaf
     if (this.textures.exists('farm_sheep_walk') && !this.anims.exists('sheep-walk')) {
       this.anims.create({
         key: 'sheep-walk',
@@ -448,7 +578,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Pig
+    // Schwein
     if (this.textures.exists('farm_pig_walk') && !this.anims.exists('pig-walk')) {
       this.anims.create({
         key: 'pig-walk',
@@ -466,7 +596,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Chicken
+    // Huhn
     if (this.textures.exists('farm_chicken_walk') && !this.anims.exists('chicken-walk')) {
       this.anims.create({
         key: 'chicken-walk',
@@ -492,7 +622,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Duck
+    // Ente
     if (this.textures.exists('farm_duck_swim') && !this.anims.exists('duck-swim')) {
       this.anims.create({
         key: 'duck-swim',
@@ -510,7 +640,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Frog
+    // Frosch
     if (this.textures.exists('farm_frog_hop') && !this.anims.exists('frog-hop')) {
       this.anims.create({
         key: 'frog-hop',
@@ -528,7 +658,7 @@ export class BootScene extends Phaser.Scene {
       });
     }
 
-    // Butterflies
+    // Schmetterlinge
     if (this.textures.exists('farm_butterfly_blue') && !this.anims.exists('butterfly-blue-fly')) {
       this.anims.create({
         key: 'butterfly-blue-fly',
@@ -545,26 +675,18 @@ export class BootScene extends Phaser.Scene {
         repeat: -1,
       });
     }
-
-    // Dog Anims
-    if (this.textures.exists('farm_dog_walk') && !this.anims.exists('dog-walk')) {
+    if (this.textures.exists('farm_butterfly_pink') && !this.anims.exists('butterfly-pink-fly')) {
       this.anims.create({
-        key: 'dog-walk',
-        frames: this.anims.generateFrameNumbers('farm_dog_walk', { start: 0, end: 5 }),
-        frameRate: 10,
-        repeat: -1,
-      });
-    }
-    if (this.textures.exists('farm_dog_idle') && !this.anims.exists('dog-idle')) {
-      this.anims.create({
-        key: 'dog-idle',
-        frames: this.anims.generateFrameNumbers('farm_dog_idle', { start: 0, end: 3 }),
-        frameRate: 4,
+        key: 'butterfly-pink-fly',
+        frames: this.anims.generateFrameNumbers('farm_butterfly_pink', { start: 0, end: 5 }),
+        frameRate: 8,
         repeat: -1,
       });
     }
 
-    // Interior Anims
+    // ----------------------------------------------------
+    // 4. Innenraum & Deko-Animationen
+    // ----------------------------------------------------
     if (this.textures.exists('hearth_fire') && !this.anims.exists('hearth-fire')) {
       this.anims.create({
         key: 'hearth-fire',

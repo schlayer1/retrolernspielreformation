@@ -167,15 +167,16 @@ export class InteriorScene extends Phaser.Scene {
       this.buildSchlosskirche(LEFT, TOP, CX, CY, addDomTag);
     }
 
-    // Player (16x32 sprite at scale 1.0)
-    const charKey = this.textures.exists('character') ? 'character' : 'keep_squire';
+    // Player (16x32 native sprite at scale 1.0 - Steinzeit benchmark)
+    const charKey = gameState.gender === 'female' && this.textures.exists('character_female') ? 'character_female' : 'character';
     this.player = this.physics.add.sprite(CX, TOP + ROOM_H - 36, charKey, 0);
     this.player.setScale(1.0);
+    this.player.setOrigin(0.5, 0.85);
     this.player.setDepth(20);
     this.player.setCollideWorldBounds(true);
     if (this.player.body) {
-      this.player.body.setSize(14, 14);
-      this.player.body.setOffset(1, 18);
+      this.player.body.setSize(10, 8);
+      this.player.body.setOffset(3, 22);
     }
 
     // Input
@@ -272,12 +273,19 @@ export class InteriorScene extends Phaser.Scene {
 
     this.player.setVelocity(vx, vy);
 
+    const g = gameState.gender;
     if (vx !== 0 || vy !== 0) {
       this.stepCooldown -= delta;
       if (this.stepCooldown <= 0) {
         sound.playFootstep('wood');
         this.stepCooldown = 320;
       }
+      const facing = Math.abs(vx) > Math.abs(vy) ? (vx > 0 ? 'right' : 'left') : vy > 0 ? 'down' : 'up';
+      const walkKey = this.anims.exists(`walk-${g}-${facing}`) ? `walk-${g}-${facing}` : `walk-${facing}`;
+      this.player.play(walkKey, true);
+    } else {
+      const idleKey = this.anims.exists(`idle-${g}-down`) ? `idle-${g}-down` : 'idle-down';
+      this.player.play(idleKey, true);
     }
 
     // Check interaction [E]

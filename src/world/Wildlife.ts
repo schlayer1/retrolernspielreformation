@@ -48,52 +48,87 @@ interface AmbientButterfly {
   speed: number;
 }
 
+interface AmbientPigeon {
+  sprite: Phaser.GameObjects.Sprite;
+  baseX: number;
+  baseY: number;
+  timer: number;
+}
+
 export class WildlifeManager {
   private scene: Phaser.Scene;
   private animals: AnimalEntity[] = [];
   private ducks: AmbientDuck[] = [];
   private frogs: BankFrog[] = [];
   private butterflies: AmbientButterfly[] = [];
+  private pigeons: AmbientPigeon[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
 
   public init(): void {
-    // 1. Kurfürstliche Boten- & Reitpferde auf der Wittenberger Schlosskoppel (x: 28..48, y: 26..30)
-    this.spawnAnimal(32 * 16, 28 * 16, 'farm_horse_idle', 20, 15, 1.0, 'horse');
-    this.spawnAnimal(46 * 16, 28 * 16, 'farm_horse_idle', 20, 15, 1.0, 'horse');
+    // 1. Marktplatz Wittenberg: Stadttauben & Haustiere direkt am Startort (x: 16..42, y: 20..26)
+    this.spawnPigeon(25 * 16, 25 * 16, false);
+    this.spawnPigeon(28 * 16, 23 * 16, false);
+    this.spawnPigeon(24 * 16, 23 * 16, true);
+    this.spawnAnimal(17 * 16, 24 * 16, 'farm_dog_idle', 14, 16, 0.9, 'dog');
+    this.spawnAnimal(34 * 16, 23 * 16, 'farm_cat_idle', 12, 14, 0.9, 'cat');
 
-    // 2. Katharinas Klosterkühe & Hofvieh (Augustinerkloster Weide: x: 28..40, y: 56..64)
-    this.spawnAnimal(34 * 16, 58 * 16, 'farm_cow_idle', 18, 14, 0.95, 'cow');
-    this.spawnAnimal(30 * 16, 62 * 16, 'farm_cow_idle', 16, 14, 0.85, 'cow');
-    this.spawnAnimal(38 * 16, 62 * 16, 'farm_pig_idle', 14, 15, 0.9, 'pig');
+    // 2. Hofhühner bei Cranachs Hofatelier (x: 38..44, y: 22..25)
+    this.spawnAnimal(38 * 16, 23 * 16, 'farm_chicken_idle', 10, 18, 0.9, 'chicken');
+    this.spawnAnimal(42 * 16, 22 * 16, 'farm_chicken_idle', 10, 18, 0.9, 'chicken');
 
-    // 3. Wollige Bergschafe auf den Hängen unterhalb der Wartburg (x: 14..26, y: 78..86)
+    // 3. Kurfürstliche Schlosskoppel (Weide östlich des Marktes: x: 30..48, y: 28..34)
+    this.spawnAnimal(32 * 16, 29 * 16, 'farm_horse_idle', 22, 15, 1.0, 'horse');
+    this.spawnAnimal(44 * 16, 30 * 16, 'farm_horse_idle', 22, 15, 1.0, 'horse');
+
+    // 4. Katharinas Klostergarten & Augustiner-Weide (x: 28..42, y: 54..64)
+    this.spawnAnimal(34 * 16, 56 * 16, 'farm_cow_idle', 18, 14, 0.95, 'cow');
+    this.spawnAnimal(40 * 16, 60 * 16, 'farm_cow_idle', 16, 14, 0.85, 'cow');
+    this.spawnAnimal(36 * 16, 62 * 16, 'farm_pig_idle', 14, 15, 0.9, 'pig');
+
+    // 5. Wollige Bergschafe an den Hängen der Wartburg (x: 14..26, y: 78..86)
     this.spawnAnimal(16 * 16, 80 * 16, 'farm_sheep_idle', 18, 14, 0.9, 'sheep');
     this.spawnAnimal(24 * 16, 82 * 16, 'farm_sheep_idle', 16, 14, 0.8, 'sheep');
 
-    // 4. Hofhühner bei Cranachs Druckerei & Frankenhausener Bauernkate
-    this.spawnAnimal(40 * 16, 24 * 16, 'farm_chicken_idle', 12, 18, 0.9, 'chicken');
-    this.spawnAnimal(42 * 16, 25 * 16, 'farm_chicken_idle', 10, 18, 0.9, 'chicken');
-    this.spawnAnimal(58 * 16, 74 * 16, 'farm_chicken_idle', 12, 18, 0.9, 'chicken');
+    // 6. Bauernkate Frankenhausen (x: 54..66, y: 72..80)
+    this.spawnAnimal(58 * 16, 76 * 16, 'farm_chicken_idle', 12, 18, 0.9, 'chicken');
+    this.spawnAnimal(62 * 16, 74 * 16, 'farm_chicken_idle', 12, 18, 0.9, 'chicken');
 
-    // 5. Schwimmende Wildenten auf der Elbe / Mulde
+    // 7. Schwimmende Wildenten auf der Elbe / Mulde
     this.spawnDuck(49 * 16, 20 * 16, 40, 10);
     this.spawnDuck(51 * 16, 36 * 16, 48, 12);
     this.spawnDuck(48 * 16, 52 * 16, 50, 11);
     this.spawnDuck(50 * 16, 68 * 16, 44, 9);
 
-    // 6. Uferfrösche an den feuchten Schilfkanten
+    // 8. Uferfrösche an den feuchten Schilfkanten
     this.spawnFrog(46 * 16, 30 * 16);
     this.spawnFrog(54 * 16, 48 * 16);
     this.spawnFrog(46 * 16, 66 * 16);
 
-    // 7. Zierliche Schmetterlinge über blühenden Wiesen
-    this.spawnButterfly(28 * 16, 16 * 16, 24, 16, 'blue');
+    // 9. Zierliche Schmetterlinge über blühenden Wiesen
+    this.spawnButterfly(23 * 16, 20 * 16, 20, 14, 'blue');
     this.spawnButterfly(44 * 16, 50 * 16, 28, 18, 'yellow');
     this.spawnButterfly(24 * 16, 78 * 16, 30, 20, 'blue');
     this.spawnButterfly(60 * 16, 64 * 16, 26, 16, 'yellow');
+  }
+
+  private spawnPigeon(x: number, y: number, isWhite: boolean): void {
+    const key = isWhite ? 'pigeon_white_peck' : 'pigeon_peck';
+    const anim = isWhite ? 'pigeon-white-peck' : 'pigeon-peck';
+    if (!this.scene.textures.exists(key)) return;
+
+    const sprite = this.scene.add.sprite(x, y, key).setScale(1.0).setDepth(y);
+    if (this.scene.anims.exists(anim)) {
+      sprite.play(anim);
+    }
+    this.pigeons.push({
+      sprite,
+      baseX: x,
+      baseY: y,
+      timer: Phaser.Math.Between(2000, 5000),
+    });
   }
 
   private spawnAnimal(
@@ -114,7 +149,9 @@ export class WildlifeManager {
 
     const idleAnim = `${animBase}-idle`;
     const walkAnim = `${animBase}-walk`;
-    const actionAnim = `${animBase}-graze` || `${animBase}-peck`;
+    const actionAnim = this.scene.anims.exists(`${animBase}-graze`)
+      ? `${animBase}-graze`
+      : (this.scene.anims.exists(`${animBase}-peck`) ? `${animBase}-peck` : undefined);
 
     if (this.scene.anims.exists(idleAnim)) {
       sprite.play(idleAnim);
@@ -136,7 +173,7 @@ export class WildlifeManager {
       activeTween: null,
       idleAnim: this.scene.anims.exists(idleAnim) ? idleAnim : undefined,
       walkAnim: this.scene.anims.exists(walkAnim) ? walkAnim : undefined,
-      actionAnim: this.scene.anims.exists(actionAnim) ? actionAnim : (this.scene.anims.exists(`${animBase}-peck`) ? `${animBase}-peck` : undefined),
+      actionAnim,
     };
 
     this.startBreatheTween(ent);
@@ -219,12 +256,12 @@ export class WildlifeManager {
     for (const ent of this.animals) {
       ent.stateTimer -= delta;
 
-      const distToPlayer = Phaser.Math.Distance.Between(ent.sprite.x, ent.sprite.y, playerX, playerY);
-
-      if (distToPlayer < 44 && ent.state !== 'player_aware') {
+      // Player proximity reaction (< 36px)
+      const dPlayer = Phaser.Math.Distance.Between(ent.sprite.x, ent.sprite.y, playerX, playerY);
+      if (dPlayer < 36 && ent.state !== 'player_aware') {
         ent.state = 'player_aware';
-        ent.stateTimer = 1500;
-        ent.facingRight = playerX > ent.sprite.x;
+        ent.stateTimer = 1600;
+        ent.facingRight = playerX < ent.sprite.x;
         ent.sprite.setFlipX(!ent.facingRight);
         if (ent.idleAnim && this.scene.anims.exists(ent.idleAnim)) {
           ent.sprite.play(ent.idleAnim, true);
@@ -307,32 +344,44 @@ export class WildlifeManager {
           if (this.scene.anims.exists('frog-hop')) {
             frog.sprite.play('frog-hop', true);
           }
-          // Hop towards water
-          const hopDirX = frog.sprite.x > 50 * 16 ? -1 : 1;
-          this.scene.tweens.add({
-            targets: frog.sprite,
-            x: frog.sprite.x + hopDirX * 18,
-            y: frog.sprite.y + Phaser.Math.Between(-8, 8),
-            duration: 800,
-            ease: 'Cubic.easeOut',
-            onComplete: () => {
-              if (this.scene.anims.exists('frog-idle')) {
-                frog.sprite.play('frog-idle', true);
-              }
-              frog.isHopping = false;
-            },
-          });
+          frog.sprite.x += (frog.sprite.x > 50 * 16 ? -1 : 1) * 8;
+        }
+      } else {
+        frog.hopTimer -= delta;
+        if (frog.hopTimer <= 0) {
+          frog.isHopping = false;
+          if (this.scene.anims.exists('frog-idle')) {
+            frog.sprite.play('frog-idle', true);
+          }
         }
       }
     }
 
-    // 4. Fluttering Butterflies
-    for (const bf of this.butterflies) {
-      bf.angle += bf.speed * delta;
-      bf.sprite.x = bf.centerX + Math.cos(bf.angle) * bf.radiusX;
-      bf.sprite.y = bf.centerY + Math.sin(bf.angle * 2) * bf.radiusY;
-      bf.sprite.setFlipX(Math.sin(bf.angle) < 0);
-      bf.sprite.setDepth(bf.sprite.y + 20);
+    // 4. Butterflies Orbiting
+    for (const b of this.butterflies) {
+      b.angle += b.speed * delta;
+      b.sprite.x = b.centerX + Math.cos(b.angle) * b.radiusX;
+      b.sprite.y = b.centerY + Math.sin(b.angle * 1.5) * b.radiusY;
+      b.sprite.setFlipX(Math.cos(b.angle) < 0);
+    }
+
+    // 5. Stadttauben am Markt
+    for (const p of this.pigeons) {
+      p.timer -= delta;
+      if (p.timer <= 0) {
+        p.timer = Phaser.Math.Between(2500, 6000);
+        p.sprite.setFlipX(Math.random() < 0.5);
+      }
+      const dPlayer = Phaser.Math.Distance.Between(p.sprite.x, p.sprite.y, playerX, playerY);
+      if (dPlayer < 24) {
+        // Taube weicht einen Schritt aus
+        const dx = p.sprite.x - playerX;
+        const dy = p.sprite.y - playerY;
+        const dist = Math.hypot(dx, dy) || 1;
+        p.sprite.x += (dx / dist) * 1.5;
+        p.sprite.y += (dy / dist) * 1.5;
+        p.sprite.setDepth(p.sprite.y);
+      }
     }
   }
 }

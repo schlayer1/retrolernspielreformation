@@ -518,11 +518,11 @@ export class UIScene extends Phaser.Scene {
               <label>2. Figur wählen:</label>
               <div class="gender-btn-group">
                 <button class="role-btn ${gameState.gender === 'male' ? 'active' : ''}" id="btn-gender-male">
-                  <img src="${gameState.malePreviewUrl || '/assets/characters/keep_squire.png'}" style="width:20px;height:40px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
+                  <img src="${gameState.malePreviewUrl}" style="width:24px;height:39px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
                   👦 Lucas (Schriftsetzer)
                 </button>
                 <button class="role-btn ${gameState.gender === 'female' ? 'active' : ''}" id="btn-gender-female">
-                  <img src="${gameState.femalePreviewUrl || '/assets/characters/keep_peasant_f.png'}" style="width:20px;height:40px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
+                  <img src="${gameState.femalePreviewUrl}" style="width:24px;height:39px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
                   👧 Katharina (Kanzleigehilfin)
                 </button>
               </div>

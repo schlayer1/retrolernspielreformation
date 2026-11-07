@@ -30,6 +30,14 @@ export const REFORMATION_DECOR: DecorObject[] = [
   { id: 'wittenberg_brunnen', name: 'Marktbrunnen Wittenberg', x: 26 * 16, y: 24 * 16, spriteKey: 'well', scale: 0.9, isObstacle: true },
   { id: 'wittenberg_bank', name: 'Sitzbank am Markt', x: 16 * 16, y: 24 * 16, spriteKey: 'bench', scale: 0.9, isObstacle: true },
   { id: 'cranach_fass_lager', name: 'Firnis- und Druckfarben-Fässer', x: 44 * 16, y: 20 * 16, spriteKey: 'barrel', scale: 0.85, isObstacle: true },
+  { id: 'markt_stand_tuch', name: 'Tuchhändler-Stand', x: 14 * 16, y: 28 * 16, spriteKey: 'stall_blue', scale: 0.95, isObstacle: true },
+  { id: 'markt_stand_kraeuter', name: 'Kräuter- & Gewürzstand', x: 22 * 16, y: 29 * 16, spriteKey: 'stall_green', scale: 0.95, isObstacle: true },
+  { id: 'wittenberg_blumen_1', name: 'Goldenes Zierbeet', x: 10 * 16, y: 23 * 16, spriteKey: 'flowerbed_gold', scale: 1.0, isObstacle: false },
+  { id: 'wittenberg_blumen_2', name: 'Veilchenbeet am Markt', x: 34 * 16, y: 21 * 16, spriteKey: 'flowerbed_violet', scale: 1.0, isObstacle: false },
+  { id: 'wittenberg_laterne_1', name: 'Kandelaber am Schlossplatz', x: 14 * 16, y: 24 * 16, spriteKey: 'lantern_post', scale: 0.9, isObstacle: true },
+  { id: 'wittenberg_laterne_2', name: 'Markt-Laterne', x: 28 * 16, y: 21 * 16, spriteKey: 'lantern_post', scale: 0.9, isObstacle: true },
+  { id: 'cranach_kiste', name: 'Hadernpapier-Kiste', x: 38 * 16, y: 21 * 16, spriteKey: 'crate_big', scale: 0.85, isObstacle: true },
+  { id: 'markt_apfelfass', name: 'Apfelfass des Obstbauern', x: 25 * 16, y: 27 * 16, spriteKey: 'barrel_apples', scale: 0.85, isObstacle: true },
 
   // 2. Tetzel Markt vor den Toren Wittenbergs (Mitte-Nord: x: 20..36, y: 32..42)
   { id: 'tetzel_stand', name: 'Tetzels Ablass-Kanzel & Stand', x: 26 * 16, y: 34 * 16, spriteKey: 'stall_red', scale: 1.0, isObstacle: true },
