@@ -57,6 +57,8 @@ export class GameState {
   public gender: ReformationPlayerGender = 'male';
   public role: ReformationPlayerRole = 'drucker';
   public playerName = 'Lucas';
+  public malePreviewUrl = '';
+  public femalePreviewUrl = '';
   public playTimeSeconds = 0;
   public walkedDistanceMeters = 0;
   public storyFlags: Record<string, boolean> = {};

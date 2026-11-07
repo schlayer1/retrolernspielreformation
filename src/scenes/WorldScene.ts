@@ -203,10 +203,14 @@ export class WorldScene extends Phaser.Scene {
     }
 
     // 8. Spawn Player
-    this.player = this.add.sprite(gameState.playerX, gameState.playerY, 'character', 0);
-    this.player.setOrigin(0.5, 0.9);
+    const texKey = gameState.gender === 'female' && this.textures.exists('character_female') ? 'character_female' : 'character';
+    this.player = this.add.sprite(gameState.playerX, gameState.playerY, texKey, 0);
+    this.player.setOrigin(0.5, 0.85);
     this.player.setScale(1.0);
     this.player.setDepth(this.player.y);
+    if (this.anims.exists(`idle-${gameState.gender}-down`)) {
+      this.player.play(`idle-${gameState.gender}-down`, true);
+    }
 
     // 9. Setup Camera Clamping & Room State
     const startRoom = ROOMS.find(
@@ -433,11 +437,11 @@ export class WorldScene extends Phaser.Scene {
           bx = 2; // Sandbank
           by = 1;
         } else if (isCastleStone) {
-          bx = 2; // Dunkler Burg-Pflasterstein
-          by = 3;
+          bx = 6; // Dunkler Burg-Pflasterstein
+          by = 1;
         } else if (isSandstoneCobble) {
-          bx = 3; // Historischer Sandstein-Pflasterstein (ohne Bolzen)
-          by = 3;
+          bx = 6; // Historischer Pflasterstein / Stadtplatz
+          by = 1;
         } else if (minRoadDist < 1.4 + dither * 0.4) {
           bx = 1; // Warmer Feldweg
           by = 0;
@@ -665,6 +669,16 @@ export class WorldScene extends Phaser.Scene {
     document.body.appendChild(this.labelDiv);
   }
 
+  public refreshCharacterAppearance(): void {
+    if (!this.player) return;
+    const texKey = gameState.gender === 'female' && this.textures.exists('character_female') ? 'character_female' : 'character';
+    this.player.setTexture(texKey);
+    const idleKey = `idle-${gameState.gender}-${this.facing || 'down'}`;
+    if (this.anims.exists(idleKey)) {
+      this.player.play(idleKey, true);
+    }
+  }
+
   update(time: number, delta: number): void {
     // 1. Movement Handling
     let vx = 0;
@@ -734,12 +748,44 @@ export class WorldScene extends Phaser.Scene {
       }
       sound.footstep(surface);
 
-      // Facing
+      // Facing & Walk Animation
+      const g = gameState.gender;
       if (Math.abs(vx) > Math.abs(vy)) {
-        this.facing = vx > 0 ? 'right' : 'left';
-        this.player.setFlipX(vx < 0);
+        if (vx > 0) {
+          this.facing = 'right';
+          this.player.setFlipX(false);
+          const aKey = this.anims.exists(`walk-${g}-right`) ? `walk-${g}-right` : 'walk-right';
+          this.player.play(aKey, true);
+        } else {
+          this.facing = 'left';
+          this.player.setFlipX(true);
+          const aKey = this.anims.exists(`walk-${g}-left`) ? `walk-${g}-left` : (this.anims.exists(`walk-${g}-right`) ? `walk-${g}-right` : 'walk-right');
+          this.player.play(aKey, true);
+        }
       } else {
-        this.facing = vy > 0 ? 'down' : 'up';
+        if (vy > 0) {
+          this.facing = 'down';
+          this.player.setFlipX(false);
+          const aKey = this.anims.exists(`walk-${g}-down`) ? `walk-${g}-down` : 'walk-down';
+          this.player.play(aKey, true);
+        } else {
+          this.facing = 'up';
+          this.player.setFlipX(false);
+          const aKey = this.anims.exists(`walk-${g}-up`) ? `walk-${g}-up` : 'walk-up';
+          this.player.play(aKey, true);
+        }
+      }
+    } else {
+      const g = gameState.gender;
+      const idleKey = `idle-${g}-${this.facing}`;
+      if (this.anims.exists(idleKey)) {
+        this.player.play(idleKey, true);
+      } else {
+        this.player.stop();
+        if (this.facing === 'down') this.player.setFrame(0);
+        else if (this.facing === 'right') this.player.setFrame(17);
+        else if (this.facing === 'up') this.player.setFrame(34);
+        else this.player.setFrame(17);
       }
     }
 
@@ -1037,23 +1083,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   public buildPlateauCliffs(): void {
-    const stairCols = [32, 68];
-    for (const sx of stairCols) {
-      if (this.textures.get('world_atlas')?.has('stairs_stone')) {
-        this.add
-          .image(sx * 16, 13 * 16, 'world_atlas', 'stairs_stone')
-          .setScale(0.75)
-          .setDepth(4);
-      }
-    }
-    if (this.textures.exists('cliffs_nature')) {
-      for (let tx = 6; tx < 94; tx += 4) {
-        if (tx >= 30 && tx <= 34) continue;
-        if (tx >= 66 && tx <= 70) continue;
-        if (tx >= 11 && tx <= 19) continue;
-        this.add.image(tx * 16, 12 * 16, 'cliffs_nature').setDepth(3);
-      }
-    }
+    // Nature cliffs and paths are rendered cleanly in the terrain texture
   }
 
   public enterInterior(roomId: string = 'lutherstube_wittenberg'): void {
