@@ -1,4 +1,5 @@
 import { ReformationRelic } from '../data/relics';
+import { gameState } from '../systems/GameState';
 import { sound } from '../audio/sound';
 
 export class ArtifactInspectorModal {
@@ -14,13 +15,22 @@ export class ArtifactInspectorModal {
       this.overlay = document.createElement('div');
       this.overlay.id = 'artifact-inspector-modal';
       this.overlay.style.cssText = `
-        position: fixed; inset: 0; background: rgba(12, 8, 6, 0.88);
-        backdrop-filter: blur(6px); z-index: 3500; display: flex;
+        position: fixed; inset: 0; background: rgba(24, 16, 10, 0.72);
+        backdrop-filter: blur(4px); z-index: 3500; display: flex;
         align-items: center; justify-content: center; padding: 16px;
         font-family: 'Cinzel', Georgia, system-ui, sans-serif;
       `;
       document.body.appendChild(this.overlay);
     }
+
+    const recordDiscovery = () => {
+      gameState.discoverRelic(relic.id);
+      if (relic.id === 'ablasskasten_tetzel') gameState.completeObjective(1, 1);
+      else if (relic.id === 'thesen_95') gameState.completeObjective(1, 3);
+      else if (relic.id === 'druckerplatte_cranach') gameState.completeObjective(2, 3);
+      else if (relic.id === 'septembertestament') gameState.completeObjective(5, 3);
+      else if (relic.id === 'religionsfriede_1555') gameState.completeObjective(8, 3);
+    };
 
     const render = () => {
       if (!this.overlay) return;
@@ -34,45 +44,45 @@ export class ArtifactInspectorModal {
       const fact = relic.didacticSummary || relic.historicalSignificance || '';
 
       this.overlay.innerHTML = `
-        <div style="background: linear-gradient(145deg, #24160e, #140d08); border: 2px solid #b45309; border-radius: 12px; max-width: 660px; width: 100%; color: #fef3c7; box-shadow: 0 20px 50px rgba(0,0,0,0.85); overflow: hidden;">
-          <div style="background: rgba(180, 83, 9, 0.2); padding: 14px 20px; border-bottom: 1px solid rgba(180, 83, 9, 0.4); display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: linear-gradient(180deg, #fdf6e3, #f5e6c8); border: 2px solid #8b5a2b; border-radius: 12px; max-width: 660px; width: 100%; color: #2c1a0e; box-shadow: 0 20px 50px rgba(28, 18, 10, 0.55); overflow: hidden;">
+          <div style="background: linear-gradient(90deg, #f3e1bc, #ebd2a2); padding: 14px 20px; border-bottom: 1.5px solid #c99e63; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #fbbf24; font-weight: bold;">🔍 Archäologischer 360°-Quelleninspektor</div>
-              <div style="font-size: 17px; font-weight: bold; color: #fff; margin-top: 2px;">${displayTitle}</div>
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.9px; color: #92400e; font-weight: 800; font-family: system-ui, sans-serif;">🔍 360°-Primärquellen-Inspektor</div>
+              <div style="font-size: 17px; font-weight: 800; color: #2c1a0e; margin-top: 2px;">${displayTitle}</div>
             </div>
-            <button id="relic-close-btn" style="background: transparent; border: none; color: #fbbf24; font-size: 24px; cursor: pointer; padding: 0 8px;">✕</button>
+            <button id="relic-close-btn" style="background: #fffbeb; border: 1.5px solid #b45309; color: #78350f; font-size: 16px; font-weight: 800; cursor: pointer; border-radius: 6px; width: 32px; height: 32px;">✕</button>
           </div>
 
-          <div style="padding: 20px; max-height: 72vh; overflow-y: auto; font-family: 'Inter', system-ui, sans-serif;">
-            <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.35); padding: 16px; border-radius: 8px; border: 1px solid rgba(180, 83, 9, 0.25);">
+          <div style="padding: 18px 20px; max-height: 72vh; overflow-y: auto; font-family: system-ui, -apple-system, sans-serif;">
+            <div style="display: flex; gap: 18px; align-items: center; margin-bottom: 16px; background: #fffbf0; padding: 14px; border-radius: 10px; border: 1.5px solid #d6b888;">
               <div style="flex-shrink: 0; text-align: center;">
-                <div style="width: 100px; height: 100px; background: radial-gradient(circle, rgba(180,83,9,0.3) 0%, rgba(0,0,0,0.7) 70%); border: 2px solid #b45309; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: transform 0.4s ease; transform: ${this.isBackSide ? 'rotateY(180deg)' : 'rotateY(0)'} scale(${this.isZoomed ? '1.4' : '1.0'});">
-                  <img src="${iconUrl}" alt="${displayTitle}" style="width: 70px; height: 70px; object-fit: contain; image-rendering: pixelated;" />
+                <div style="width: 96px; height: 96px; background: radial-gradient(circle, #fef3c7 0%, #e7d0a3 80%); border: 2px solid #8b5a2b; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; transition: transform 0.35s ease; transform: ${this.isBackSide ? 'rotateY(180deg)' : 'rotateY(0)'} scale(${this.isZoomed ? '1.35' : '1.0'});">
+                  <img src="${iconUrl}" alt="${displayTitle}" style="width: 68px; height: 68px; object-fit: contain; image-rendering: pixelated;" />
                 </div>
-                <div style="font-size: 10px; color: #fbbf24; margin-top: 6px; font-weight: 600;">
+                <div style="font-size: 10.5px; color: #78350f; margin-top: 6px; font-weight: 700;">
                   ${this.isBackSide ? '🔄 Revers (Rückseite)' : '🔍 Avers (Vorderseite)'}
                 </div>
               </div>
 
               <div style="flex-grow: 1;">
-                <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                  <span style="background: rgba(180,83,9,0.25); border: 1px solid #b45309; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #fde68a;">⏳ ${dating}</span>
-                  <span style="background: rgba(180,83,9,0.25); border: 1px solid #b45309; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #fde68a;">📍 ${location}</span>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                  <span style="background: #fef3c7; border: 1px solid #d97706; border-radius: 6px; padding: 3px 9px; font-size: 11.5px; color: #78350f; font-weight: 700;">⏳ ${dating}</span>
+                  <span style="background: #fef3c7; border: 1px solid #d97706; border-radius: 6px; padding: 3px 9px; font-size: 11.5px; color: #78350f; font-weight: 700;">📍 ${location}</span>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                  <button id="relic-flip-btn" style="background: #b45309; border: 1px solid #d97706; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button id="relic-flip-btn" style="background: #b45309; border: 1.5px solid #78350f; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
                     🔄 360° Wenden
                   </button>
-                  <button id="relic-zoom-btn" style="background: rgba(255,255,255,0.08); border: 1px solid #b45309; color: #fbbf24; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                  <button id="relic-zoom-btn" style="background: #fffdf7; border: 1.5px solid #8b5a2b; color: #78350f; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
                     🔎 ${this.isZoomed ? 'Verkleinern' : 'Lupe (Zoom)'}
                   </button>
                 </div>
               </div>
             </div>
 
-            <div style="margin-bottom: 16px;">
-              <h4 style="font-family: 'Cinzel', Georgia, serif; color: #fbbf24; margin-bottom: 6px; font-size: 14px;">Wissenschaftlicher Befund:</h4>
-              <p style="font-size: 13px; line-height: 1.5; color: #fef3c7; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 6px; border-left: 3px solid #b45309;">
+            <div style="margin-bottom: 14px;">
+              <h4 style="font-family: 'Cinzel', Georgia, serif; color: #78350f; margin: 0 0 6px 0; font-size: 14px; font-weight: 800;">Historischer Quellenbefund (${this.isBackSide ? 'Revers' : 'Avers'})</h4>
+              <p style="font-size: 13px; line-height: 1.5; color: #2c1a0e; background: #fffdf7; padding: 12px; border-radius: 8px; border-left: 4px solid #b45309; margin: 0;">
                 ${descText}
               </p>
             </div>
@@ -80,18 +90,18 @@ export class ArtifactInspectorModal {
             ${
               fact
                 ? `
-              <div style="background: rgba(180,83,9,0.15); border: 1px dashed #b45309; border-radius: 6px; padding: 12px;">
-                <div style="font-size: 11px; font-weight: bold; color: #fbbf24; margin-bottom: 4px; text-transform: uppercase;">💡 Didaktische Primärquellen-Bedeutung</div>
-                <div style="font-size: 12.5px; color: #fed7aa; line-height: 1.4;">${fact}</div>
+              <div style="background: #f9eccf; border: 1.5px dashed #b45309; border-radius: 8px; padding: 12px;">
+                <div style="font-size: 11px; font-weight: 800; color: #92400e; margin-bottom: 4px; text-transform: uppercase;">💡 Historische Einordnung</div>
+                <div style="font-size: 12.5px; color: #3f2814; line-height: 1.45;">${fact}</div>
               </div>
             `
                 : ''
             }
           </div>
 
-          <div style="background: rgba(0,0,0,0.3); padding: 12px 20px; border-top: 1px solid rgba(180,83,9,0.3); text-align: right;">
-            <button id="relic-ok-btn" style="background: #b45309; border: 1px solid #d97706; color: #fff; font-weight: bold; padding: 7px 18px; border-radius: 6px; cursor: pointer;">
-              In den Chronisten-Beutel legen
+          <div style="background: #f2e1be; padding: 12px 20px; border-top: 1.5px solid #c99e63; text-align: right;">
+            <button id="relic-ok-btn" style="background: #b45309; border: 1.5px solid #78350f; color: #fff; font-weight: 800; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 13px;">
+              In den Chronisten-Beutel sichern ✓
             </button>
           </div>
         </div>
@@ -110,8 +120,10 @@ export class ArtifactInspectorModal {
       });
 
       const closeHandler = () => {
-        sound.playClick();
+        sound.playSuccess();
+        recordDiscovery();
         this.close();
+        (window as any).__showToast?.(`📜 Quelle gesichert: ${relic.foundName || relic.name}`);
         if (onClose) onClose();
       };
 
@@ -120,6 +132,7 @@ export class ArtifactInspectorModal {
     };
 
     sound.playSelect();
+    recordDiscovery();
     this.overlay.style.display = 'flex';
     render();
   }

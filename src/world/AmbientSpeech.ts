@@ -4,6 +4,7 @@ export interface AmbientSpeaker {
   id: string;
   name: string;
   role: string;
+  spriteKey: 'npc_citizen_m' | 'npc_citizen_f';
   x: number;
   y: number;
   quotes: string[];
@@ -14,7 +15,8 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'buerger_wittenberg',
     name: 'Heinrich (Kürschner)',
     role: 'Wittenberger Bürger',
-    x: 24 * 16,
+    spriteKey: 'npc_citizen_m',
+    x: 17 * 16,
     y: 28 * 16,
     quotes: [
       '„Hast du die 95 Thesen an der Kirche gelesen? Der Mönch spricht aus, was alle denken!“',
@@ -25,8 +27,9 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'student_wittenberg',
     name: 'Nikolaus (Magisterstudent)',
     role: 'Student an der Leucorea',
-    x: 32 * 16,
-    y: 24 * 16,
+    spriteKey: 'npc_citizen_m',
+    x: 31 * 16,
+    y: 25 * 16,
     quotes: [
       '„Meister Melanchthon lehrt uns Griechisch – ad fontes, zurück zu den Quellen!“',
       '„Gestern kam die neue Flugschrift frisch aus Cranachs Druckerpresse!“',
@@ -36,6 +39,7 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'ablass_pilger',
     name: 'Margarethe (Pilgerin)',
     role: 'Bäuerin aus Bitterfeld',
+    spriteKey: 'npc_citizen_f',
     x: 68 * 16,
     y: 44 * 16,
     quotes: [
@@ -47,8 +51,9 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'fuhrmann_augsburg',
     name: 'Kilian (Kaufmannsknecht)',
     role: 'Fugger-Fuhrknecht',
+    spriteKey: 'npc_citizen_m',
     x: 66 * 16,
-    y: 18 * 16,
+    y: 25 * 16,
     quotes: [
       '„Kardinal Cajetan verlangt das einfache Bekenntnis: Revoco – ich widerrufe!“',
       '„Golddukaten aus Venedig rollen ins Fugger-Kontor. Geld regiert die Welt.“',
@@ -58,8 +63,9 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'landsknecht_worms',
     name: 'Veit (Kaiserlicher Wächter)',
     role: 'Hellebardier des Kaisers',
-    x: 78 * 16,
-    y: 18 * 16,
+    spriteKey: 'npc_guard' as any,
+    x: 77 * 16,
+    y: 25 * 16,
     quotes: [
       '„Ganz Worms steht kopf! Der Kaiser gewährt Luther freies Geleit.“',
       '„Der Mönch weicht keinen Schritt zurück. Sein Gewissen sei in Gottes Wort gefangen.“',
@@ -69,8 +75,9 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'burgwaechter_wartburg',
     name: 'Kunz (Burgknecht)',
     role: 'Torwächter der Wartburg',
+    spriteKey: 'npc_citizen_m',
     x: 24 * 16,
-    y: 76 * 16,
+    y: 78 * 16,
     quotes: [
       '„Unser Gast Junker Jörg sitzt Tag und Nacht am Schreibtisch. Die Feder kratzt unaufhörlich.“',
       '„Er übersetzt das Heilige Buch ins Deutsche – jedes Kind soll es verstehen können!“',
@@ -80,8 +87,9 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'baeuerin_frankenhausen',
     name: 'Elsbeth (Landarbeiterin)',
     role: 'Aufständische Bauersfrau',
-    x: 58 * 16,
-    y: 74 * 16,
+    spriteKey: 'npc_citizen_f',
+    x: 62 * 16,
+    y: 77 * 16,
     quotes: [
       '„Die Zwölf Artikel fordern nur Gottes Recht: Keine Frondienste ohne Entlohnung!“',
       '„Warum soll das Wild im Wald den Edelleuten allein gehören? Gott schuf es für alle!“',
@@ -91,8 +99,9 @@ export const REFORMATION_CITIZENS: AmbientSpeaker[] = [
     id: 'ratsherr_augsburg',
     name: 'Hieronymus (Ratsherr)',
     role: 'Gesandter zu Augsburg 1555',
-    x: 76 * 16,
-    y: 74 * 16,
+    spriteKey: 'npc_citizen_m',
+    x: 75 * 16,
+    y: 79 * 16,
     quotes: [
       '„Frieden nach vierzig Jahren Zwietracht! Cuius regio, eius religio soll das Reich einen.“',
       '„Wer seinem Glauben treu bleiben will, darf friedlich mit Hab und Gut auswandern.“',
@@ -105,36 +114,65 @@ export class AmbientSpeechManager {
   private container: HTMLElement;
   private activeBubble: HTMLElement | null = null;
   private activeSpeakerId: string | null = null;
+  private activeSpeakerPos: { x: number; y: number } | null = null;
   private cooldowns: Record<string, number> = {};
+  private citizenSprites: { sp: AmbientSpeaker; sprite: Phaser.GameObjects.Sprite }[] = [];
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
-    let existing = document.getElementById('ambient-speech-layer');
+    const existing = document.getElementById('ambient-speech-layer');
     if (existing) {
       this.container = existing;
     } else {
       this.container = document.createElement('div');
       this.container.id = 'ambient-speech-layer';
-      this.container.style.position = 'fixed';
-      this.container.style.top = '0';
-      this.container.style.left = '0';
-      this.container.style.width = '100vw';
-      this.container.style.height = '100vh';
-      this.container.style.pointerEvents = 'none';
-      this.container.style.zIndex = '5'; // Strict Z-Index 5 under HUD
       document.body.appendChild(this.container);
     }
   }
 
+  public spawnCitizens(scene: Phaser.Scene): Phaser.GameObjects.Sprite[] {
+    const out: Phaser.GameObjects.Sprite[] = [];
+    for (const c of REFORMATION_CITIZENS) {
+      const key = scene.textures.exists(c.spriteKey) ? c.spriteKey : 'npc_citizen_m';
+      if (!scene.textures.exists(key)) continue;
+      const sprite = scene.add.sprite(c.x, c.y, key, 0).setOrigin(0.5, 0.9).setDepth(c.y);
+      if (scene.anims.exists(`${key}-idle-down`)) {
+        sprite.play(`${key}-idle-down`);
+      }
+      this.citizenSprites.push({ sp: c, sprite });
+      out.push(sprite);
+    }
+    return out;
+  }
+
   public update(playerX: number, playerY: number, deltaMs: number): void {
-    // Tick cooldowns
+    const isModalOpen = Boolean((window as any).__isModalOpen?.());
+    if (isModalOpen) {
+      if (this.activeBubble) this.dismissBubble(true);
+      return;
+    }
+
     for (const id in this.cooldowns) {
       if (this.cooldowns[id] > 0) this.cooldowns[id] -= deltaMs;
     }
 
-    // Check proximity (< 65px)
+    // Face player when nearby & trigger speech
     let closest: AmbientSpeaker | null = null;
-    let minDist = 65;
+    let minDist = 64;
+
+    for (const item of this.citizenSprites) {
+      const d = Math.hypot(item.sp.x - playerX, item.sp.y - playerY);
+      if (d < 52) {
+        const dx = playerX - item.sp.x;
+        const dy = playerY - item.sp.y;
+        const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+        const key = item.sprite.texture.key;
+        const idleKey = `${key}-idle-${dir}`;
+        if (this.scene.anims.exists(idleKey) && item.sprite.anims.currentAnim?.key !== idleKey) {
+          item.sprite.play(idleKey);
+        }
+      }
+    }
 
     for (const sp of REFORMATION_CITIZENS) {
       const dist = Math.hypot(sp.x - playerX, sp.y - playerY);
@@ -149,57 +187,52 @@ export class AmbientSpeechManager {
         this.showBubble(closest);
       }
     }
+
+    if (this.activeBubble && this.activeSpeakerPos) {
+      const activeDist = Math.hypot(this.activeSpeakerPos.x - playerX, this.activeSpeakerPos.y - playerY);
+      if (activeDist > 115) {
+        this.dismissBubble(true);
+      } else {
+        this.positionBubble(this.activeBubble, this.activeSpeakerPos.x, this.activeSpeakerPos.y);
+      }
+    }
+  }
+
+  private positionBubble(bubble: HTMLElement, worldX: number, worldY: number): void {
+    const canvas = this.scene.game.canvas;
+    const rect = canvas.getBoundingClientRect();
+    const cam = this.scene.cameras.main;
+    const sx = rect.left + ((worldX - cam.worldView.x) / cam.worldView.width) * rect.width;
+    const sy = rect.top + ((worldY - 38 - cam.worldView.y) / cam.worldView.height) * rect.height;
+
+    const left = Math.max(rect.left + 8, Math.min(rect.right - 250, sx - 120));
+    const top = Math.max(rect.top + 48, Math.min(rect.bottom - 76, sy - 42));
+    bubble.style.left = `${Math.round(left)}px`;
+    bubble.style.top = `${Math.round(top)}px`;
   }
 
   private showBubble(speaker: AmbientSpeaker): void {
     this.dismissBubble(true);
     this.activeSpeakerId = speaker.id;
-    this.cooldowns[speaker.id] = 12000; // 12s cooldown
+    this.activeSpeakerPos = { x: speaker.x, y: speaker.y };
+    this.cooldowns[speaker.id] = 12000;
 
     const quote = speaker.quotes[Math.floor(Math.random() * speaker.quotes.length)];
-
     const bubble = document.createElement('div');
-    bubble.className = 'ambient-speech-bubble';
+    bubble.className = 'ambient-bubble';
     bubble.innerHTML = `
-      <div style="font-size: 10px; color: #fbbf24; font-weight: bold; margin-bottom: 2px;">
-        🗣️ ${speaker.name} (${speaker.role})
-      </div>
-      <div style="font-size: 12px; color: #fdf6e3; line-height: 1.35; font-style: italic;">
-        ${quote}
-      </div>
+      <div class="ambient-bubble-speaker">${speaker.name} · <span>${speaker.role}</span></div>
+      <div class="ambient-bubble-quote">${quote}</div>
     `;
-
-    Object.assign(bubble.style, {
-      position: 'absolute',
-      background: 'rgba(24, 18, 30, 0.92)',
-      border: '1px solid #d97706',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      maxWidth: '280px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
-      transition: 'opacity 0.4s ease, transform 0.4s ease',
-      opacity: '0',
-      transform: 'translateY(6px)',
-      pointerEvents: 'none',
-    });
 
     this.container.appendChild(bubble);
     this.activeBubble = bubble;
+    this.positionBubble(bubble, speaker.x, speaker.y);
 
-    // Position bubble above speaker
-    const cam = this.scene.cameras.main;
-    const screenX = (speaker.x - cam.scrollX) * cam.zoom + cam.width / 2;
-    const screenY = (speaker.y - cam.scrollY) * cam.zoom + cam.height / 2 - 55;
-    bubble.style.left = `${Math.round(screenX - 140)}px`;
-    bubble.style.top = `${Math.round(screenY)}px`;
-
-    // Fade in
     requestAnimationFrame(() => {
-      bubble.style.opacity = '1';
-      bubble.style.transform = 'translateY(0)';
+      bubble.classList.add('visible');
     });
 
-    // Auto fade out after 3.8s
     setTimeout(() => {
       if (this.activeBubble === bubble) {
         this.dismissBubble(false);
@@ -212,13 +245,13 @@ export class AmbientSpeechManager {
     const b = this.activeBubble;
     this.activeBubble = null;
     this.activeSpeakerId = null;
+    this.activeSpeakerPos = null;
 
     if (immediate) {
       b.remove();
     } else {
-      b.style.opacity = '0';
-      b.style.transform = 'translateY(-6px)';
-      setTimeout(() => b.remove(), 400);
+      b.classList.remove('visible');
+      setTimeout(() => b.remove(), 350);
     }
   }
 }

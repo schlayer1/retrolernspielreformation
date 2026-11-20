@@ -31,8 +31,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Finanzkritik',
     intro: 'Johann Tetzel preist mit markigen Worten den päpstlichen Ablass an. Untersuche den Eichenkasten und entlarve die Verflechtung von Seelenangst und Finanzen.',
     historicalPillar: 'Ablasskritik & Historische Urteilskompetenz',
-    x: 31 * 16,
-    y: 34 * 16,
+    x: 30 * 16,
+    y: 35 * 16,
     steps: [
       {
         id: 'step_1',
@@ -88,8 +88,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Medienrevolution',
     intro: 'Luthers lateinische Streitschrift muss für das einfache Volk gedruckt werden. Setze die Bleilettern im Winkelhaken und bediene die Druckerpresse!',
     historicalPillar: 'Gutenberg-Technologie & Medienrevolution',
-    x: 136 * 16,
-    y: 21 * 16,
+    x: 37 * 16,
+    y: 23 * 16,
     steps: [
       {
         id: 'step_1',
@@ -145,8 +145,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Theologiedialog',
     intro: 'Kardinal Cajetan verlangt das eine Wort: „Revoco“ (Ich widerrufe). Ordne die Argumente, um Luthers theologische Position zu verteidigen.',
     historicalPillar: 'Sola Scriptura & Gewissensfreiheit',
-    x: 126 * 16,
-    y: 54 * 16,
+    x: 64 * 16,
+    y: 23 * 16,
     steps: [
       {
         id: 'step_1',
@@ -180,8 +180,8 @@ export const REFORMATION_STATIONS: DidacticStation[] = [
     badge: 'Sprachschöpfung',
     intro: 'Als „Junker Jörg“ übersetzt Luther das griechische Neue Testament. Wähle die kraftvollen deutschen Worte, die bis heute unser Sprechen prägen!',
     historicalPillar: 'Entstehung der deutschen Schriftsprache',
-    x: 174 * 16,
-    y: 52 * 16,
+    x: 21 * 16,
+    y: 78 * 16,
     steps: [
       {
         id: 'step_1',

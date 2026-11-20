@@ -14,6 +14,10 @@ export class BootScene extends Phaser.Scene {
     this.load.image('cliffs_nature', '/assets/world/cliffs_nature.png');
     this.load.image('cliffs_desert', '/assets/world/cliffs_desert.png');
     this.load.image('Overworld', '/assets/gfx/Overworld.png');
+    this.load.spritesheet('walls_and_floors', '/assets/tilesets/walls_and_floors.png', {
+      frameWidth: 16,
+      frameHeight: 16,
+    });
 
     // 2. Main Character Spritesheet (Strict 16x32 Steinzeit-Benchmark Standard)
     this.load.spritesheet('character', '/assets/gfx/character.png', {
@@ -21,7 +25,7 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 32,
     });
 
-    // 3. Mentors & Historical Figures (16x32 Native Pixel Art Sheets)
+    // 3. Mentors, Historical Figures & Citizens (16x32 Native Pixel Art Sheets)
     const mentorIds = [
       'npc_luther',
       'npc_cranach',
@@ -32,6 +36,8 @@ export class BootScene extends Phaser.Scene {
       'npc_muentzer',
       'npc_friedrich',
       'npc_guard',
+      'npc_citizen_m',
+      'npc_citizen_f',
     ];
     for (const id of mentorIds) {
       this.load.spritesheet(id, `/assets/gfx/npcs/${id}.png`, {
@@ -150,28 +156,30 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 13,
     });
 
-    // 5. Authentic 16-Bit Props, Buildings & Town Architecture
+    // 5. Authentic 16-Bit Props, Buildings & Town Architecture (nur verifizierte Einzel-Props!)
     const props = [
       'chapel',
       'well',
       'cottage_stone',
       'cottage_thatch',
+      'cottage_tile',
+      'cottage_moss',
+      'barn',
+      'smithy',
+      'stable',
       'monastery_scriptorium_desk',
-      'monastery_book_lectern',
-      'monastery_altar_shrine',
       'monastery_herbal_planter',
-      'fortress_gatehouse',
-      'fortress_battlement',
-      'royal_throne_gold',
       'gatehouse',
       'house_tall_slate',
+      'house_tall_tile',
       'house_gable_tile',
+      'house_gable_slate',
+      'house_gable_plum',
       'tower_round',
       'stall_red',
       'stall_blue',
       'stall_green',
       'keep',
-      'peasant_thatched_cottage',
       'cart_hay',
       'cart_goods',
       'bench',
@@ -193,14 +201,16 @@ export class BootScene extends Phaser.Scene {
       'banner_wall',
       'banner_stand',
       'window_curtains',
-      'interior_guild_library_day',
-      'interior_guild_library_night',
-      'interior_tavern_day',
-      'interior_tavern_night',
-      'interior_alchemist_day',
-      'interior_inn_rooms_day',
-      'interior_store_smithy_day',
-      'house_gable_slate',
+      'castle_chest_wood',
+      'anvil',
+      'bedroll_red',
+      'table',
+      'table_food',
+      'table_map',
+      'stool',
+      'tavern_dining_table',
+      'tavern_serving_counter',
+      'tavern_beer_casks',
       'statue_king',
       'flowerbed_gold',
       'flowerbed_blue',
@@ -208,16 +218,23 @@ export class BootScene extends Phaser.Scene {
       'flowerbed_violet',
       'lantern_post',
       'lantern_post_double',
-      'village_stone_well_prop',
+      'reeds',
+      'reeds_2',
+      'lilypad',
+      'lilypad_flower',
+      'boat',
       'sign_shop',
       'sign_inn',
       'sign_smith',
       'signpost',
-      'keep_market',
     ];
     for (const p of props) {
       this.load.image(p, `/assets/props/${p}.png`);
     }
+    this.load.spritesheet('monastery_book_lectern', '/assets/props/monastery_book_lectern.png', {
+      frameWidth: 16,
+      frameHeight: 32,
+    });
 
     // 6. Interior Animated Strips
     this.load.spritesheet('hearth_fire', '/assets/animations/hearth_fire_strip.png', {
@@ -225,11 +242,11 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 44,
     });
     this.load.spritesheet('dog_sleeping', '/assets/animations/dog_sleeping_strip.png', {
-      frameWidth: 48,
+      frameWidth: 24,
       frameHeight: 14,
     });
     this.load.spritesheet('candle_lit', '/assets/animations/candle_lit_strip.png', {
-      frameWidth: 8,
+      frameWidth: 4,
       frameHeight: 11,
     });
     this.load.spritesheet('coin_sparkle', '/assets/animations/coin_sparkle_strip.png', {
@@ -418,9 +435,19 @@ export class BootScene extends Phaser.Scene {
     });
 
     // 64x128 Sheets (4 Spalten x 4 Zeilen: 0=down, 4=right, 8=up, 12=left)
-    const standardNpcs = ['npc_cranach', 'npc_cajetan', 'npc_karl_v', 'npc_katharina', 'npc_muentzer', 'npc_friedrich', 'npc_guard'];
+    const standardNpcs = [
+      'npc_cranach',
+      'npc_cajetan',
+      'npc_karl_v',
+      'npc_katharina',
+      'npc_muentzer',
+      'npc_friedrich',
+      'npc_guard',
+      'npc_citizen_m',
+      'npc_citizen_f',
+    ];
     standardNpcs.forEach((id) => {
-      if (this.textures.exists(id)) {
+      if (this.textures.exists(id) && !this.anims.exists(`${id}-idle`)) {
         dirs.forEach((dir, row) => {
           const start = row * 4;
           this.anims.create({
@@ -494,7 +521,7 @@ export class BootScene extends Phaser.Scene {
     if (this.textures.exists('farm_dog_idle') && !this.anims.exists('dog-idle')) {
       this.anims.create({
         key: 'dog-idle',
-        frames: this.anims.generateFrameNumbers('farm_dog_idle', { start: 0, end: 3 }),
+        frames: this.anims.generateFrameNumbers('farm_dog_idle', { start: 0, end: 7 }),
         frameRate: 4,
         repeat: -1,
       });
@@ -698,7 +725,7 @@ export class BootScene extends Phaser.Scene {
     if (this.textures.exists('dog_sleeping') && !this.anims.exists('dog-sleeping-anim')) {
       this.anims.create({
         key: 'dog-sleeping-anim',
-        frames: this.anims.generateFrameNumbers('dog_sleeping', { start: 0, end: 3 }),
+        frames: this.anims.generateFrameNumbers('dog_sleeping', { start: 0, end: 7 }),
         frameRate: 3,
         repeat: -1,
       });
@@ -706,7 +733,7 @@ export class BootScene extends Phaser.Scene {
     if (this.textures.exists('candle_lit') && !this.anims.exists('candle-lit-anim')) {
       this.anims.create({
         key: 'candle-lit-anim',
-        frames: this.anims.generateFrameNumbers('candle_lit', { start: 0, end: 3 }),
+        frames: this.anims.generateFrameNumbers('candle_lit', { start: 0, end: 7 }),
         frameRate: 6,
         repeat: -1,
       });

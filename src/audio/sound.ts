@@ -1,200 +1,11 @@
-class ReformationSynthesizer {
-  private getContext: () => AudioContext | null;
-  private isPlaying = false;
-  private stepInterval: any = null;
-  private stepIndex = 0;
-  private masterGain: GainNode | null = null;
-  private currentChapter = 1;
-  private theme: 'choral' | 'lute' = 'choral';
-
-  constructor(getContext: () => AudioContext | null) {
-    this.getContext = getContext;
-  }
-
-  public setTheme(theme: 'choral' | 'lute'): void {
-    this.theme = theme;
-  }
-
-  public getTheme(): 'choral' | 'lute' {
-    return this.theme;
-  }
-
-  public start(chapter = 1, volume = 0.22): void {
-    this.stop();
-    this.isPlaying = true;
-    this.stepIndex = 0;
-    this.currentChapter = chapter;
-
-    const ctx = this.getContext();
-    if (!ctx) return;
-
-    this.masterGain = ctx.createGain();
-    this.masterGain.gain.setValueAtTime(volume, ctx.currentTime);
-    this.masterGain.connect(ctx.destination);
-
-    // Sakrale Renaissance-Tonleitern (Dorisch / Kantionalsatz à la „Ein feste Burg“)
-    const isDramatic = chapter === 4 || chapter === 7; // Worms & Bauernkrieg
-    const chordProgressions = isDramatic
-      ? [
-          [220.0, 261.63, 329.63], // Am
-          [174.61, 220.0, 261.63], // F
-          [196.0, 246.94, 293.66], // G
-          [164.81, 207.65, 246.94], // E-Dur
-        ]
-      : [
-          [261.63, 329.63, 392.0], // C
-          [196.0, 246.94, 293.66], // G
-          [220.0, 261.63, 329.63], // Am
-          [174.61, 220.0, 261.63], // F
-        ];
-
-    // Melodie: Reformation Choral vs. Renaissance-Lied
-    const leadMelody = isDramatic
-      ? [440, 440, 440, 392, 440, 523.25, 493.88, 440]
-      : [523.25, 523.25, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88];
-
-    const stepDuration = this.theme === 'lute' ? 0.20 : 0.24;
-
-    this.stepInterval = setInterval(() => {
-      if (!this.isPlaying) return;
-      const actx = this.getContext();
-      if (!actx || !this.masterGain) return;
-
-      const chordIdx = Math.floor(this.stepIndex / 4) % chordProgressions.length;
-      const currentChord = chordProgressions[chordIdx];
-      const arpNote = currentChord[this.stepIndex % 3];
-      const leadNote = leadMelody[Math.floor(this.stepIndex / 2) % leadMelody.length];
-      const bassNote = currentChord[0] / 2;
-
-      const now = actx.currentTime;
-
-      if (this.theme === 'lute') {
-        // --- RENAISSANCE-LAUTE (Plucked acoustic strings with resonant body) ---
-        const luteOsc = actx.createOscillator();
-        const luteGain = actx.createGain();
-        const luteFilter = actx.createBiquadFilter();
-
-        luteOsc.type = 'triangle';
-        luteOsc.frequency.setValueAtTime(arpNote, now);
-        luteFilter.type = 'bandpass';
-        luteFilter.frequency.setValueAtTime(950, now);
-        luteFilter.Q.setValueAtTime(2.2, now);
-
-        luteGain.gain.setValueAtTime(0.14, now);
-        luteGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 0.75);
-
-        luteOsc.connect(luteFilter);
-        luteFilter.connect(luteGain);
-        luteGain.connect(this.masterGain);
-        luteOsc.start(now);
-        luteOsc.stop(now + stepDuration * 0.8);
-
-        // Traversflöte Lead
-        if (this.stepIndex % 2 === 0) {
-          const fluteOsc = actx.createOscillator();
-          const fluteGain = actx.createGain();
-          fluteOsc.type = 'sine';
-          fluteOsc.frequency.setValueAtTime(leadNote, now);
-          fluteGain.gain.setValueAtTime(0.05, now);
-          fluteGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 1.6);
-          fluteOsc.connect(fluteGain);
-          fluteGain.connect(this.masterGain);
-          fluteOsc.start(now);
-          fluteOsc.stop(now + stepDuration * 1.8);
-        }
-
-        // Lute Bourdon Drone Bass
-        if (this.stepIndex % 4 === 0) {
-          const bassOsc = actx.createOscillator();
-          const bassGain = actx.createGain();
-          bassOsc.type = 'triangle';
-          bassOsc.frequency.setValueAtTime(bassNote * 1.5, now);
-          bassGain.gain.setValueAtTime(0.12, now);
-          bassGain.gain.exponentialRampToValueAtTime(0.005, now + stepDuration * 2.8);
-          bassOsc.connect(bassGain);
-          bassGain.connect(this.masterGain);
-          bassOsc.start(now);
-          bassOsc.stop(now + stepDuration * 3);
-        }
-      } else {
-        // --- SAKRAL-ORGEL & GAMBE (Choral) ---
-        // 1. Orgel / Gamben-Arpeggio
-        const arpOsc = actx.createOscillator();
-        const arpGain = actx.createGain();
-        arpOsc.type = 'triangle';
-        arpOsc.frequency.setValueAtTime(arpNote, now);
-        arpGain.gain.setValueAtTime(0.08, now);
-        arpGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 0.9);
-        arpOsc.connect(arpGain);
-        arpGain.connect(this.masterGain);
-        arpOsc.start(now);
-        arpOsc.stop(now + stepDuration);
-
-        // 2. Orgel-Pedal Bass
-        if (this.stepIndex % 4 === 0) {
-          const bassOsc = actx.createOscillator();
-          const bassGain = actx.createGain();
-          bassOsc.type = 'sine';
-          bassOsc.frequency.setValueAtTime(bassNote, now);
-          bassGain.gain.setValueAtTime(0.18, now);
-          bassGain.gain.exponentialRampToValueAtTime(0.01, now + stepDuration * 3.8);
-          bassOsc.connect(bassGain);
-          bassGain.connect(this.masterGain);
-          bassOsc.start(now);
-          bassOsc.stop(now + stepDuration * 4);
-        }
-
-        // 3. Choral Lead-Stimme
-        if (this.stepIndex % 2 === 0) {
-          const leadOsc = actx.createOscillator();
-          const leadGain = actx.createGain();
-          leadOsc.type = isDramatic ? 'sawtooth' : 'triangle';
-          leadOsc.frequency.setValueAtTime(leadNote, now);
-          leadGain.gain.setValueAtTime(0.07, now);
-          leadGain.gain.exponentialRampToValueAtTime(0.001, now + stepDuration * 1.8);
-          leadOsc.connect(leadGain);
-          leadGain.connect(this.masterGain);
-          leadOsc.start(now);
-          leadOsc.stop(now + stepDuration * 2);
-        }
-      }
-
-      this.stepIndex = (this.stepIndex + 1) % (chordProgressions.length * 4);
-    }, stepDuration * 1000);
-  }
-
-  public stop(): void {
-    this.isPlaying = false;
-    if (this.stepInterval) {
-      clearInterval(this.stepInterval);
-      this.stepInterval = null;
-    }
-    if (this.masterGain) {
-      try {
-        this.masterGain.disconnect();
-      } catch {}
-      this.masterGain = null;
-    }
-  }
-
-  public setVolume(vol: number): void {
-    if (this.masterGain && this.getContext()) {
-      this.masterGain.gain.setValueAtTime(vol, this.getContext()!.currentTime);
-    }
-  }
-}
+import { musicManager } from './MusicManager';
 
 export class SoundManager {
   private ctx: AudioContext | null = null;
-  private bgmAudio: HTMLAudioElement | null = null;
-  private synth: ReformationSynthesizer;
   private muted = false;
-  private volume = 0.35;
+  private volume = 0.42;
+  private theme: 'choral' | 'lute' = 'choral';
   private lastFootstepTime = 0;
-
-  constructor() {
-    this.synth = new ReformationSynthesizer(() => this.getAudioContext());
-  }
 
   private getAudioContext(): AudioContext | null {
     if (!this.ctx) {
@@ -211,89 +22,60 @@ export class SoundManager {
 
   public startBGM(chapter = 1): void {
     if (this.muted) return;
-
-    const tracks = ['/assets/audio/bgm/bgm_warmth.mp3', '/assets/audio/bgm/bgm_patterns.mp3', '/assets/audio/bgm/bgm_heart.mp3'];
-    const trackUrl = tracks[(chapter - 1) % tracks.length];
-
-    if (!this.bgmAudio) {
-      this.bgmAudio = new Audio();
-      this.bgmAudio.loop = true;
-      this.bgmAudio.volume = this.volume;
-
-      this.bgmAudio.onerror = () => {
-        console.warn('MP3 BGM nicht vorhanden, wechsle zum Renaissance-Synthesizer...');
-        this.synth.start(chapter, this.volume * 0.7);
-      };
-    }
-
-    this.bgmAudio.src = trackUrl;
-    this.bgmAudio.play().catch(() => {
-      // Autoplay fallback auf Synthesizer
-      this.synth.start(chapter, this.volume * 0.7);
-    });
+    musicManager.playChapterTrack(chapter);
   }
 
   public stopBGM(): void {
-    if (this.bgmAudio) {
-      this.bgmAudio.pause();
-    }
-    this.synth.stop();
+    musicManager.stopCurrent();
   }
 
   public setVolume(vol: number): void {
     this.volume = Math.max(0, Math.min(1, vol));
-    if (this.bgmAudio) this.bgmAudio.volume = this.volume;
-    this.synth.setVolume(this.volume * 0.7);
-  }
-
-  public toggleMute(): boolean {
-    this.muted = !this.muted;
-    if (this.muted) {
-      this.stopBGM();
-    } else {
-      this.startBGM(1);
-    }
-    return this.muted;
-  }
-
-  public isMuted(): boolean {
-    return this.muted;
+    musicManager.setVolume(this.volume);
   }
 
   public getVolume(): number {
-    return this.volume;
+    return musicManager.getVolume();
+  }
+
+  public toggleMute(): boolean {
+    this.muted = musicManager.toggleMute();
+    return this.muted;
+  }
+
+  public setMuted(m: boolean): void {
+    this.muted = m;
+    musicManager.setMuted(m);
+  }
+
+  public isMuted(): boolean {
+    return musicManager.isMuted();
+  }
+
+  public get bgmMuted(): boolean {
+    return musicManager.isMuted();
   }
 
   public setTheme(theme: 'choral' | 'lute'): void {
-    this.synth.setTheme(theme);
-    if (!this.muted) {
-      this.synth.start(1, this.volume * 0.7);
-    }
+    this.theme = theme;
   }
 
   public getTheme(): 'choral' | 'lute' {
-    return this.synth.getTheme();
+    return this.theme;
   }
 
   public toggleTheme(): 'choral' | 'lute' {
-    const next = this.synth.getTheme() === 'choral' ? 'lute' : 'choral';
-    this.setTheme(next);
-    return next;
+    this.theme = this.theme === 'choral' ? 'lute' : 'choral';
+    return this.theme;
   }
 
   public setIndoorAcoustics(indoor: boolean): void {
-    const desired = indoor ? 'lute' : 'choral';
-    if (this.synth.getTheme() !== desired) {
-      this.synth.setTheme(desired);
-      if (!this.muted) {
-        this.synth.start(1, this.volume * (indoor ? 0.6 : 0.7));
-      }
-    }
+    this.theme = indoor ? 'lute' : 'choral';
   }
 
   // SFX Synthesizer
   public click(): void {
-    if (this.muted) return;
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -302,7 +84,7 @@ export class SoundManager {
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(520, now);
     osc.frequency.exponentialRampToValueAtTime(320, now + 0.05);
-    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.setValueAtTime(0.11, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -311,17 +93,16 @@ export class SoundManager {
   }
 
   public questStep(): void {
-    if (this.muted) return;
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const notes = [440, 554.37, 659.25];
-    notes.forEach((freq, idx) => {
+    [440, 554.37, 659.25].forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, now + idx * 0.08);
-      gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+      gain.gain.setValueAtTime(0.13, now + idx * 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.16);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -331,17 +112,16 @@ export class SoundManager {
   }
 
   public success(): void {
-    if (this.muted) return;
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5];
-    notes.forEach((freq, idx) => {
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, now + idx * 0.1);
-      gain.gain.setValueAtTime(0.18, now + idx * 0.1);
+      gain.gain.setValueAtTime(0.16, now + idx * 0.1);
       gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.28);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -351,7 +131,7 @@ export class SoundManager {
   }
 
   public door(): void {
-    if (this.muted) return;
+    if (this.isMuted()) return;
     const ctx = this.getAudioContext();
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -359,19 +139,19 @@ export class SoundManager {
     const gain = ctx.createGain();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(140, now);
-    osc.frequency.linearRampToValueAtTime(80, now + 0.22);
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start(now);
-    osc.stop(now + 0.22);
+    osc.stop(now + 0.2);
   }
 
   public footstep(surface: 'stone' | 'dirt' | 'grass' | 'wood' = 'grass'): void {
-    if (this.muted) return;
+    if (this.isMuted()) return;
     const nowMs = Date.now();
-    if (nowMs - this.lastFootstepTime < 320) return;
+    if (nowMs - this.lastFootstepTime < 300) return;
     this.lastFootstepTime = nowMs;
 
     const ctx = this.getAudioContext();
@@ -387,28 +167,28 @@ export class SoundManager {
       osc.frequency.setValueAtTime(160, now);
       filter.type = 'bandpass';
       filter.frequency.setValueAtTime(1800, now);
-      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.setValueAtTime(0.07, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
     } else if (surface === 'dirt') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(120, now);
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(200, now);
-      gain.gain.setValueAtTime(0.12, now);
+      filter.frequency.setValueAtTime(220, now);
+      gain.gain.setValueAtTime(0.10, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     } else if (surface === 'wood') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(220, now);
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(440, now);
-      gain.gain.setValueAtTime(0.1, now);
+      filter.frequency.setValueAtTime(460, now);
+      gain.gain.setValueAtTime(0.09, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     } else {
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.setValueAtTime(300, now);
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1200, now);
-      gain.gain.setValueAtTime(0.07, now);
+      filter.frequency.setValueAtTime(1100, now);
+      gain.gain.setValueAtTime(0.06, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
     }
 
@@ -419,14 +199,16 @@ export class SoundManager {
     osc.stop(now + 0.06);
   }
 
-  public get bgmMuted(): boolean {
-    return this.muted;
-  }
   public playClick(): void { this.click(); }
   public playSelect(): void { this.click(); }
   public playSuccess(): void { this.success(); }
   public playFanfare(): void { this.success(); }
   public playCollect(): void { this.questStep(); }
+  public playPickup(): void { this.questStep(); }
+  public playDialog(): void { this.click(); }
+  public playCraft(): void { this.questStep(); }
+  public playError(): void { this.door(); }
+  public playQuestDone(): void { this.success(); }
   public step(surface?: any): void { this.footstep(surface); }
   public playFootstep(surface?: any): void { this.footstep(surface); }
   public toggleBGM(): boolean { return this.toggleMute(); }

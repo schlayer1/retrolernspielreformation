@@ -2,12 +2,12 @@ import Phaser from 'phaser';
 import { sound } from '../audio/sound';
 import { REFORMATION_CHAPTERS, ChapterData, MentorData } from '../data/chapters';
 import { REFORMATION_ITEMS, REFORMATION_RECIPES, ReformationItemId } from '../data/items';
-import { REFORMATION_LEXICON, LexiconEntry } from '../data/lexicon';
+import { REFORMATION_LEXICON } from '../data/lexicon';
 import { REFORMATION_RELICS, ReformationRelic } from '../data/relics';
-import { REFORMATION_STATIONS, DidacticStation } from '../data/stations';
+import { REFORMATION_STATIONS } from '../data/stations';
 import { REFORMATION_DILEMMAS } from '../data/dilemmas';
 import { gameState, REFORMATION_ROLES } from '../systems/GameState';
-import { ReformationPlayerGender, ReformationPlayerRole } from '../systems/SaveManager';
+import { ReformationPlayerRole } from '../systems/SaveManager';
 import { TouchControls } from '../ui/TouchControls';
 import { PrintSheet } from '../ui/PrintSheet';
 import { DilemmaModal } from '../ui/DilemmaModal';
@@ -47,7 +47,7 @@ export class UIScene extends Phaser.Scene {
   private lastActionKeyMs = 0;
 
   private selectedLexiconId: string = REFORMATION_LEXICON[0].id;
-  private lexiconFilterCategory: string = 'Alle';
+  private lexiconFilterCategory = 'Alle';
 
   constructor() {
     super('UIScene');
@@ -71,13 +71,20 @@ export class UIScene extends Phaser.Scene {
     this.openStartScreen();
   }
 
+  private checkExternalModalOpen(): boolean {
+    const ids = ['station-modal', 'artifact-inspector-modal', 'timeline-modal', 'dilemma-modal'];
+    return ids.some((id) => {
+      const el = document.getElementById(id);
+      return Boolean(el && el.style.display && el.style.display !== 'none');
+    });
+  }
+
   private registerGlobalHooks(): void {
     const win = window as any;
     win.__REF_UI__ = this;
-    win.__isModalOpen = () => this.activeModal !== 'none';
-    win.__openMentorDialog = (mentorOrCh: any) => {
-      const cur = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter) || REFORMATION_CHAPTERS[0];
-      this.openMentorDialog(cur.mentor);
+    win.__isModalOpen = () => this.activeModal !== 'none' || this.checkExternalModalOpen();
+    win.__openMentorDialog = (mentorOrCh?: any, onClose?: () => void) => {
+      this.openMentorDialog(mentorOrCh ?? gameState.chapter, onClose);
     };
     win.__openStation = (id: string) => this.openStation(id);
     win.__openArtifactInspector = (relIdOrObj: any) => this.openArtifactInspector(relIdOrObj);
@@ -87,6 +94,7 @@ export class UIScene extends Phaser.Scene {
     win.__showToast = (msg: string) => this.showToast(msg);
     win.__closeModal = () => this.closeModal();
     win.__eatFood = () => this.eatFood();
+    win.__toggleModal = (k: string) => this.handleShortcutKey(String(k || '').toUpperCase());
   }
 
   private initDOMStructure(): void {
@@ -119,6 +127,8 @@ export class UIScene extends Phaser.Scene {
       if (e.key === 'Escape') {
         if (this.activeModal !== 'none' && this.activeModal !== 'start') {
           this.closeModal();
+        } else if (this.checkExternalModalOpen()) {
+          this.closeModal();
         } else if (this.activeModal === 'none') {
           this.openPauseDashboard();
         }
@@ -132,15 +142,12 @@ export class UIScene extends Phaser.Scene {
         if (now - this.lastActionKeyMs < 160) return;
         this.lastActionKeyMs = now;
 
-        if (this.activeModal === 'dialog') {
-          e.preventDefault();
-          this.closeModal();
-          return;
-        }
-        if (this.activeModal === 'none') {
+        if (!(window as any).__isModalOpen?.()) {
           e.preventDefault();
           const win = window as any;
-          if (win.__triggerInteraction) {
+          if (win.__activeInterior?.trigger) {
+            win.__activeInterior.trigger();
+          } else if (win.__triggerInteraction) {
             win.__triggerInteraction();
           }
           return;
@@ -154,58 +161,68 @@ export class UIScene extends Phaser.Scene {
   }
 
   public handleShortcutKey(key: string): void {
-    if (key === 'ESCAPE' || key === 'ESC') {
-      if (this.activeModal !== 'none') this.closeModal();
+    const k = key.toUpperCase();
+    if (k === 'ESCAPE' || k === 'ESC') {
+      if (this.activeModal !== 'none' || this.checkExternalModalOpen()) this.closeModal();
       else this.openPauseDashboard();
       return;
     }
+    if (k === 'E') {
+      const win = window as any;
+      if (!(window as any).__isModalOpen?.()) {
+        if (win.__activeInterior?.trigger) win.__activeInterior.trigger();
+        else if (win.__triggerInteraction) win.__triggerInteraction();
+      }
+      return;
+    }
+
     sound.click();
-    if (key === 'M') {
+    if (k === 'M') {
       const isMuted = sound.toggleMute();
       this.showToast(isMuted ? '🔇 Ton stummgeschaltet' : '🔊 Ton aktiv');
       this.renderHUD();
       return;
     }
-    if (key === 'F') {
+    if (k === 'F') {
       this.eatFood();
       return;
     }
-    if (key === 'P') {
+    if (k === 'P') {
       if (this.activeModal === 'pause') this.closeModal();
       else this.openPauseDashboard();
       return;
     }
-    if (key === 'I') {
+    if (k === 'I') {
       if (this.activeModal === 'inventory') this.closeModal();
       else this.openInventory();
       return;
     }
-    if (key === 'C') {
+    if (k === 'C') {
       if (this.activeModal === 'craft') this.closeModal();
-      else this.openGutenbergWorkshopModal();
+      else this.openCraftingModal();
       return;
     }
-    if (key === 'H') {
+    if (k === 'H') {
       if (this.activeModal === 'dilemma') this.closeModal();
       else this.openDilemmaModal();
       return;
     }
-    if (key === 'L') {
+    if (k === 'L') {
       if (this.activeModal === 'lexicon') this.closeModal();
       else this.openLexiconModal();
       return;
     }
-    if (key === 'Z') {
+    if (k === 'Z') {
       if (this.activeModal === 'timeline') this.closeModal();
       else this.openTimelineModal();
       return;
     }
-    if (key === 'U') {
+    if (k === 'U') {
       if (this.activeModal === 'certificate') this.closeModal();
       else this.openCertificateModal();
       return;
     }
-    if (key === 'K') {
+    if (k === 'K') {
       if (this.activeModal === 'start') this.closeModal();
       else this.openStartScreen();
       return;
@@ -224,14 +241,29 @@ export class UIScene extends Phaser.Scene {
     this.printSheet.print();
   }
 
+  private hideChapterBanner(): void {
+    const el = document.getElementById('chapter-banner-overlay');
+    if (el) el.style.display = 'none';
+  }
+
   public openStation(stationId: string): void {
+    if (stationId === 'station_druckerei') {
+      this.openGutenbergWorkshopModal(() => {
+        this.renderHUD();
+        this.renderQuestTracker();
+      });
+      return;
+    }
     const st = REFORMATION_STATIONS.find((s) => s.id === stationId);
     if (!st) return;
     this.closeModal();
+    this.hideChapterBanner();
+    this.activeModal = 'station';
+    this.touchControls?.setVisible(false);
     this.stationModal.open(st, () => {
-      this.showToast(`🏛️ Station gemeistert: ${st.name}! (+100 Punkte)`);
+      this.activeModal = 'none';
+      this.closeModal();
       sound.playSuccess();
-      this.renderHUD();
     });
   }
 
@@ -240,15 +272,23 @@ export class UIScene extends Phaser.Scene {
     const rel = REFORMATION_RELICS.find((r) => r.id === id) || REFORMATION_RELICS[0];
     if (!rel) return;
     this.closeModal();
+    this.hideChapterBanner();
+    this.activeModal = 'relic';
+    this.touchControls?.setVisible(false);
     this.artifactInspector.open(rel, () => {
-      this.renderHUD();
+      this.activeModal = 'none';
+      this.closeModal();
     });
   }
 
   public openTimelineModal(): void {
     this.closeModal();
+    this.hideChapterBanner();
+    this.activeModal = 'timeline';
+    this.touchControls?.setVisible(false);
     this.timelineModal.open(() => {
-      this.renderHUD();
+      this.activeModal = 'none';
+      this.closeModal();
     });
   }
 
@@ -259,31 +299,36 @@ export class UIScene extends Phaser.Scene {
     this.stationModal.close();
     this.artifactInspector.close();
     this.timelineModal.close();
-    this.touchControls.setVisible(true);
+    this.touchControls?.setVisible(true);
+
+    this.renderHUD();
+    this.renderQuestTracker();
 
     const world = this.scene.get('WorldScene') as WorldScene;
     if (world && world.resetDialogFocus) {
       world.resetDialogFocus();
+      world.updateQuestCompass();
     }
   }
 
   public renderHUD(): void {
     if (!this.hudHeader) return;
-    this.hudHeader.style.display = this.activeModal === 'start' ? 'none' : 'flex';
+    const isStart = this.activeModal === 'start';
+    this.hudHeader.style.display = isStart ? 'none' : 'flex';
     if (this.questBox) {
-      this.questBox.style.display = this.activeModal === 'start' ? 'none' : 'flex';
+      this.questBox.style.display = isStart ? 'none' : 'flex';
     }
     if (this.touchControls) {
-      this.touchControls.setVisible(this.activeModal === 'none');
+      this.touchControls.setVisible(this.activeModal === 'none' && !this.checkExternalModalOpen());
     }
 
-    const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter) || REFORMATION_CHAPTERS[0];
+    const curCh = gameState.getChapterData();
     const roleDef = REFORMATION_ROLES.find((r) => r.id === gameState.role) || REFORMATION_ROLES[0];
     const stateObj = gameState.chapterObjectives[curCh.number] || [false, false, false, false];
     const allDone = gameState.checkQuest(curCh.number);
 
     const taskText = allDone
-      ? `Alle Aufgaben gemeistert! Sprich mit ${curCh.mentor.name} für die theologische Disputation (E).`
+      ? `Alle Aufgaben gemeistert! Sprich mit ${curCh.mentor.name} [E].`
       : curCh.primaryObjective;
 
     const knowPct = Math.max(0, Math.min(100, Math.round(gameState.knowledge)));
@@ -296,24 +341,24 @@ export class UIScene extends Phaser.Scene {
           📜 Kap. ${curCh.number}: ${curCh.title} (${curCh.year}) · ${gameState.playerName} (${roleDef.name})
         </div>
         <div id="hud-quest">
-          <div style="margin-bottom:4px;">📋 <strong>Aufgabe:</strong> ${taskText}</div>
-          <div class="quest-steps-list" style="margin:4px 0;">
+          <div class="hud-primary-task">📋 <strong>Ziel:</strong> ${taskText}</div>
+          <div class="quest-steps-list">
             ${curCh.objectives
               .map(
                 (obj, idx) => `
-              <div class="quest-step-item ${stateObj[idx] ? 'step-done' : ''}" style="display:flex;align-items:center;gap:5px;font-size:11px;color:${stateObj[idx] ? '#86efac' : '#fef3c7'};">
+              <div class="quest-step-item ${stateObj[idx] ? 'step-done' : ''}">
                 <span>${stateObj[idx] ? '✅' : '⬜'}</span>
-                <span style="${stateObj[idx] ? 'text-decoration:line-through;opacity:0.85;' : ''}">${obj}</span>
+                <span>${obj}</span>
               </div>
             `
               )
               .join('')}
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:4px;">
-            <span style="font-size:10.5px;color:${allDone ? '#4ade80' : '#fde68a'};">
-              ${allDone ? `✨ Bereit für Disputation bei ${curCh.mentor.name} [E]!` : `💡 Mentor: ${curCh.mentor.name} [E]`}
+          <div class="hud-mentor-row">
+            <span class="hud-mentor-tip ${allDone ? 'done' : ''}">
+              ${allDone ? `✨ Bereit für Disputation bei ${curCh.mentor.name}` : `💡 Mentor: ${curCh.mentor.name}`}
             </span>
-            <button id="btn-open-mentor-dialog" class="hud-btn" style="padding:2px 7px;font-size:10.5px;">
+            <button id="btn-open-mentor-dialog" class="hud-btn hud-btn-compact">
               💬 ${curCh.mentor.name}
             </button>
           </div>
@@ -323,7 +368,7 @@ export class UIScene extends Phaser.Scene {
 
       <div class="hud-right">
         <div class="hud-card" id="hud-bars-card">
-          <div class="bar-row" title="Wissen & theologische Gelehrsamkeit">
+          <div class="bar-row" title="Wissen & Gelehrsamkeit">
             <span>📖 Wissen</span>
             <div class="bar-track"><div class="bar-fill yellow" id="bar-knowledge" style="width:${knowPct}%"></div></div>
             <span id="val-knowledge">${knowPct}%</span>
@@ -333,7 +378,7 @@ export class UIScene extends Phaser.Scene {
             <div class="bar-track"><div class="bar-fill blue" id="bar-courage" style="width:${couragePct}%"></div></div>
             <span id="val-courage">${couragePct}%</span>
           </div>
-          <div class="bar-row" title="Glaube & Frömmigkeit (Sola Fide)">
+          <div class="bar-row" title="Glaube & Frömmigkeit">
             <span>✝️ Glaube</span>
             <div class="bar-track"><div class="bar-fill orange" id="bar-piety" style="width:${pietyPct}%"></div></div>
             <span id="val-piety">${pietyPct}%</span>
@@ -341,33 +386,31 @@ export class UIScene extends Phaser.Scene {
           <div class="hud-subinfo">
             Lexikon: <b id="hud-lex-count">${gameState.unlockedLexicon.size}/27</b> ·
             🏺 Relikte: <b>${gameState.discoveredRelics.size}/5</b> ·
-            <span id="hud-time-of-day">☀️ Tag</span> ·
-            🎵 Musik: <b id="hud-music-state">${sound.bgmMuted ? 'Aus' : 'An'}</b>
+            🎵 Musik: <b id="hud-music-state">${sound.isMuted() ? 'Aus' : 'An'}</b>
           </div>
         </div>
 
+        <button class="hud-btn mobile-menu-trigger" id="btn-mobile-menu" data-modal="pause">☰ Menü [P]</button>
+
         <div class="hud-btn-row">
-          <button class="hud-btn ${this.activeModal === 'pause' ? 'active' : ''}" id="btn-pause" data-modal="pause" title="Pause-Dashboard [P / ESC]"><span class="key-badge">P</span> ⏸ Pause</button>
-          <button class="hud-btn ${this.activeModal === 'inventory' ? 'active' : ''}" id="btn-bag" data-modal="inventory" title="Beutel & Relikte [I]"><span class="key-badge">I</span> 🎒 Beutel</button>
-          <button class="hud-btn ${this.activeModal === 'craft' ? 'active' : ''}" id="btn-craft" data-modal="craft" title="Gutenberg-Werkstatt [C]"><span class="key-badge">C</span> Werkstatt</button>
-          <button class="hud-btn ${this.activeModal === 'dilemma' ? 'active' : ''}" id="btn-dilemma" data-modal="dilemma" title="Gewissensfrage [H]"><span class="key-badge">H</span> Gewissen</button>
-          <button class="hud-btn ${this.activeModal === 'lexicon' ? 'active' : ''}" id="btn-lexicon" data-modal="lexicon" title="Reformations-Lexikon (27 Begriffe) [L]"><span class="key-badge">L</span> Lexikon</button>
-          <button class="hud-btn ${this.activeModal === 'timeline' ? 'active' : ''}" id="btn-timeline" data-modal="timeline" title="Epochen-Zeitstrahl [Z]"><span class="key-badge">Z</span> Zeitstrahl</button>
-          <button class="hud-btn" id="btn-eat" data-action="eat" title="Proviant essen [F]"><span class="key-badge">F</span> Essen</button>
-          <button class="hud-btn" id="btn-music" data-action="music" title="Musik an/aus [M]"><span class="key-badge">M</span> 🎵 Musik</button>
-          <button class="hud-btn" id="btn-epoch" data-modal="start" title="Kapitel wählen [K]"><span class="key-badge">K</span> Epoche</button>
-          <button class="hud-btn ${this.activeModal === 'certificate' ? 'active' : ''}" id="btn-cert" data-modal="certificate" title="Chronisten-Diplom [U]"><span class="key-badge">U</span> Diplom</button>
+          <button class="hud-btn ${this.activeModal === 'pause' ? 'active' : ''}" id="btn-pause" data-modal="pause"><span class="key-badge">P</span> ⏸ Pause</button>
+          <button class="hud-btn ${this.activeModal === 'inventory' ? 'active' : ''}" id="btn-bag" data-modal="inventory"><span class="key-badge">I</span> 🎒 Beutel</button>
+          <button class="hud-btn ${this.activeModal === 'craft' ? 'active' : ''}" id="btn-craft" data-modal="craft"><span class="key-badge">C</span> Werkstatt</button>
+          <button class="hud-btn ${this.activeModal === 'dilemma' ? 'active' : ''}" id="btn-dilemma" data-modal="dilemma"><span class="key-badge">H</span> Gewissen</button>
+          <button class="hud-btn ${this.activeModal === 'lexicon' ? 'active' : ''}" id="btn-lexicon" data-modal="lexicon"><span class="key-badge">L</span> Lexikon</button>
+          <button class="hud-btn ${this.activeModal === 'timeline' ? 'active' : ''}" id="btn-timeline" data-modal="timeline"><span class="key-badge">Z</span> Zeitstrahl</button>
+          <button class="hud-btn" id="btn-eat" data-action="eat"><span class="key-badge">F</span> Essen</button>
+          <button class="hud-btn" id="btn-music" data-action="music"><span class="key-badge">M</span> ${sound.isMuted() ? '🔇 Ton' : '🎵 Ton'}</button>
+          <button class="hud-btn" id="btn-epoch" data-modal="start"><span class="key-badge">K</span> Epoche</button>
+          <button class="hud-btn ${this.activeModal === 'certificate' ? 'active' : ''}" id="btn-cert" data-modal="certificate"><span class="key-badge">U</span> Diplom</button>
         </div>
       </div>
     `;
 
-    const mentorBtn = this.hudHeader.querySelector('#btn-open-mentor-dialog');
-    if (mentorBtn) {
-      mentorBtn.addEventListener('click', () => {
-        sound.click();
-        this.openMentorDialog(curCh.mentor);
-      });
-    }
+    this.hudHeader.querySelector('#btn-open-mentor-dialog')?.addEventListener('click', () => {
+      sound.click();
+      this.openMentorDialog(curCh.number);
+    });
 
     this.hudHeader.querySelectorAll('.hud-btn').forEach((btn) => {
       if (btn.id === 'btn-open-mentor-dialog') return;
@@ -382,25 +425,14 @@ export class UIScene extends Phaser.Scene {
           return;
         }
         const m = btn.getAttribute('data-modal') as ModalType;
-        if (m) {
-          if (m === 'start') {
-            this.openStartScreen();
-          } else if (m === 'pause') {
-            this.openPauseDashboard();
-          } else if (m === 'inventory') {
-            this.openInventory();
-          } else if (m === 'craft') {
-            this.openGutenbergWorkshopModal();
-          } else if (m === 'dilemma') {
-            this.openDilemmaModal();
-          } else if (m === 'lexicon') {
-            this.openLexiconModal();
-          } else if (m === 'timeline') {
-            this.openTimelineModal();
-          } else if (m === 'certificate') {
-            this.openCertificateModal();
-          }
-        }
+        if (m === 'start') this.openStartScreen();
+        else if (m === 'pause') this.openPauseDashboard();
+        else if (m === 'inventory') this.openInventory();
+        else if (m === 'craft') this.openCraftingModal();
+        else if (m === 'dilemma') this.openDilemmaModal();
+        else if (m === 'lexicon') this.openLexiconModal();
+        else if (m === 'timeline') this.openTimelineModal();
+        else if (m === 'certificate') this.openCertificateModal();
       });
     });
   }
@@ -415,9 +447,9 @@ export class UIScene extends Phaser.Scene {
       'druckerschwaerze',
       'holzschnitt_platte',
       'flugschrift',
-      'ablassbrief',
       'brot_fladen',
-      'tinte_feder',
+      'apfel',
+      'bier_krug',
     ];
 
     const slotsHtml = hotbarItems
@@ -436,7 +468,7 @@ export class UIScene extends Phaser.Scene {
     const relicSlotsHtml = REFORMATION_RELICS.map((r) => {
       const found = gameState.discoveredRelics.has(r.id);
       return `
-        <div class="hotbar-slot relic-slot ${found ? 'has-item' : ''}" data-slot-relic="${r.id}" title="${found ? r.name : `Unentdecktes Relikt`}">
+        <div class="hotbar-slot relic-slot ${found ? 'has-item' : ''}" data-slot-relic="${r.id}" title="${found ? r.name : 'Unentdeckte Quelle'}">
           <img src="${r.icon}" alt="${r.name}" style="opacity:${found ? '1' : '0.25'}" />
           <span class="count">${found ? '★' : '🔒'}</span>
         </div>
@@ -444,7 +476,7 @@ export class UIScene extends Phaser.Scene {
     }).join('');
 
     this.questBox.innerHTML = `
-      <div id="hud-hint">WASD / Pfeiltasten = Bewegen · E = Interagieren · F = Essen · C = Werkstatt · I = Beutel · P = Pause</div>
+      <div id="hud-hint">WASD/Pfeile = Bewegen · E = Interagieren · F = Proviant · C = Werkstatt · I = Beutel · P = Pause</div>
       <div class="hud-bottom-row">
         <div id="hud-hotbar">
           ${slotsHtml}
@@ -456,16 +488,10 @@ export class UIScene extends Phaser.Scene {
       </div>
     `;
 
-    this.questBox.querySelector('#btn-hotbar-bag')?.addEventListener('click', () => {
-      this.openInventory();
-    });
-
+    this.questBox.querySelector('#btn-hotbar-bag')?.addEventListener('click', () => this.openInventory());
     this.questBox.querySelectorAll('[data-slot-item]').forEach((el) => {
-      el.addEventListener('click', () => {
-        this.openInventory();
-      });
+      el.addEventListener('click', () => this.openInventory());
     });
-
     this.questBox.querySelectorAll('[data-slot-relic]').forEach((el) => {
       el.addEventListener('click', () => {
         const relId = el.getAttribute('data-slot-relic');
@@ -476,67 +502,66 @@ export class UIScene extends Phaser.Scene {
 
   public openStartScreen(): void {
     this.activeModal = 'start';
-    this.touchControls.setVisible(false);
+    this.touchControls?.setVisible(false);
+    this.renderHUD();
+    this.renderQuestTracker();
     this.modalOverlay.style.display = 'flex';
 
     this.modalOverlay.innerHTML = `
       <div class="startscreen-container">
-        <!-- Header -->
         <div class="startscreen-header">
           <div class="st-title-line">
             <span class="st-icon">📜</span>
-            <h1>DIE REFORMATION: GLAUBE, MACHT & MEDIENREVOLUTION</h1>
-            <span class="st-era-tag">Klasse 7 / 8 · 1517 – 1555 n. Chr.</span>
+            <h1>DIE REFORMATION: GLAUBE, MACHT &amp; MEDIENREVOLUTION</h1>
+            <span class="st-era-tag">Klasse 7/8 · 1517–1555</span>
           </div>
-          <p class="st-subtitle">Erlebe Martin Luthers Thesenanschlag, den Wormser Reichstag, die Wartburg-Bibelübersetzung und die Buchdruckkunst</p>
+          <p class="st-subtitle">Martin Luthers Thesenanschlag, Lucas Cranachs Buchdruck, der Reichstag zu Worms &amp; die Wartburg</p>
         </div>
 
-        <!-- Hero Showcase Box (Alle 8 Kapitel) -->
         <div class="hero-showcase-box">
-          <div class="showcase-title">✨ 8 ABENTEUER-KAPITEL DER REFORMATION</div>
+          <div class="showcase-title">✨ 8 KAPITEL DER REFORMATION WÄHLEN</div>
           <div class="showcase-grid-8">
             ${REFORMATION_CHAPTERS.map(
               (c) => `
-              <div class="sc-card ${c.number === gameState.chapter ? 'active' : ''}" onclick="window.__startSelectCh(${c.number})">
-                <div class="sc-badge">K${c.number}</div>
+              <div class="sc-card ${c.number === gameState.chapter ? 'active' : ''}" data-start-ch="${c.number}">
+                <div class="sc-badge">K${c.number} · ${c.year}</div>
                 <div class="sc-name">${c.title}</div>
-                <div class="sc-mentor">${c.mentor.role}</div>
+                <div class="sc-mentor">${c.mentor.name}</div>
               </div>
             `
             ).join('')}
           </div>
         </div>
 
-        <!-- Setup Form -->
         <div class="startscreen-form">
           <div class="form-row">
             <div class="form-group flex-1">
-              <label>1. Dein Name:</label>
+              <label>1. Dein Chronisten-Name:</label>
               <input type="text" id="start-player-name" value="${gameState.playerName}" maxlength="18" />
             </div>
             <div class="form-group">
-              <label>2. Figur wählen:</label>
+              <label>2. Spielfigur:</label>
               <div class="gender-btn-group">
                 <button class="role-btn ${gameState.gender === 'male' ? 'active' : ''}" id="btn-gender-male">
-                  <img src="${gameState.malePreviewUrl}" style="width:24px;height:39px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
-                  👦 Lucas (Schriftsetzer)
+                  <img src="${gameState.malePreviewUrl}" class="preview-avatar-16x32" alt="Lucas" />
+                  👦 Lucas
                 </button>
                 <button class="role-btn ${gameState.gender === 'female' ? 'active' : ''}" id="btn-gender-female">
-                  <img src="${gameState.femalePreviewUrl}" style="width:24px;height:39px;image-rendering:pixelated;vertical-align:middle;margin-right:6px;" />
-                  👧 Katharina (Kanzleigehilfin)
+                  <img src="${gameState.femalePreviewUrl}" class="preview-avatar-16x32" alt="Katharina" />
+                  👧 Katharina
                 </button>
               </div>
             </div>
           </div>
 
           <div class="form-group">
-            <label>3. Deine historische Herkunft & Begabung (Rolle wählen):</label>
+            <label>3. Historische Rolle (Start-Bonus):</label>
             <div class="roles-selection-grid">
               ${REFORMATION_ROLES.map(
                 (r) => `
                 <div class="role-card ${gameState.role === r.id ? 'active' : ''}" data-role="${r.id}">
                   <div class="role-head">
-                    <img src="${r.icon}" class="role-icon" />
+                    <img src="${r.icon}" class="role-icon" alt="${r.name}" />
                     <strong>${r.name}</strong>
                   </div>
                   <p class="role-desc">${r.description}</p>
@@ -551,24 +576,22 @@ export class UIScene extends Phaser.Scene {
             <div class="form-group flex-1">
               <label>📝 Hefter-Kurzcode vorhanden? (Stunde fortsetzen):</label>
               <div class="code-input-wrap">
-                <input type="text" id="start-hefter-code" placeholder="z. B. REF-LUC-1517" />
+                <input type="text" id="start-hefter-code" placeholder="z. B. REF-K03-LUC-0201-42" />
                 <button class="btn-sub" id="btn-load-hefter-code">Code laden</button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Footer Buttons -->
         <div class="startscreen-footer">
           <div class="controls-hint">
-            🎮 <strong>Steuerung:</strong> WASD / Pfeiltasten = Bewegen · [E] = Interagieren · [I] = Beutel · [C] = Werkstatt · [P] = Menü
+            🎮 WASD/Pfeile = Gehen · [E] = Interagieren · [C] = Werkstatt · [I] = Beutel · [P] = Menü
           </div>
           <button class="start-btn-launch" id="btn-start-game">🚀 Reformation starten!</button>
         </div>
       </div>
     `;
 
-    // Event Bindings
     const nameInput = document.getElementById('start-player-name') as HTMLInputElement;
     nameInput?.addEventListener('input', () => {
       gameState.playerName = nameInput.value.trim() || 'Lucas';
@@ -584,7 +607,7 @@ export class UIScene extends Phaser.Scene {
       }
       btnMale.classList.add('active');
       btnFemale?.classList.remove('active');
-      (this.scene.get('WorldScene') as any)?.refreshCharacterAppearance?.();
+      (this.scene.get('WorldScene') as WorldScene)?.refreshCharacterAppearance?.();
     });
     btnFemale?.addEventListener('click', () => {
       gameState.gender = 'female';
@@ -594,10 +617,17 @@ export class UIScene extends Phaser.Scene {
       }
       btnFemale.classList.add('active');
       btnMale?.classList.remove('active');
-      (this.scene.get('WorldScene') as any)?.refreshCharacterAppearance?.();
+      (this.scene.get('WorldScene') as WorldScene)?.refreshCharacterAppearance?.();
     });
 
-    // Roles selection
+    this.modalOverlay.querySelectorAll('.sc-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const ch = parseInt(card.getAttribute('data-start-ch') || '1', 10);
+        gameState.selectStartChapter(ch);
+        this.openStartScreen();
+      });
+    });
+
     this.modalOverlay.querySelectorAll('.role-card').forEach((card) => {
       card.addEventListener('click', (e) => {
         const role = (e.currentTarget as HTMLElement).dataset.role as ReformationPlayerRole;
@@ -607,41 +637,41 @@ export class UIScene extends Phaser.Scene {
       });
     });
 
-    // Hefter Code Load
     document.getElementById('btn-load-hefter-code')?.addEventListener('click', () => {
       const codeInput = document.getElementById('start-hefter-code') as HTMLInputElement;
       if (codeInput && gameState.loadFromHefterCode(codeInput.value)) {
         sound.success();
-        this.showToast('✅ Hefter-Code erfolgreich geladen!');
+        this.showToast(`✅ Hefter-Code geladen! Kapitel ${gameState.chapter} aktiv.`);
         this.openStartScreen();
       } else {
         sound.click();
-        this.showToast('❌ Ungültiger Hefter-Code. Bitte prüfen!');
+        this.showToast('❌ Ungültiger Hefter-Code (Format: REF-K0x-NAME-...).');
       }
     });
 
-    // Chapter Direct Select Helper
-    (window as any).__startSelectCh = (chId: number) => {
-      gameState.selectStartChapter(chId);
-      this.openStartScreen();
-    };
-
-    // Launch Game
     const startLaunch = () => {
       sound.door();
+      gameState.applyRoleBonus();
+      const world = this.scene.get('WorldScene') as WorldScene;
       this.closeModal();
+      if (world) {
+        world.refreshCharacterAppearance();
+        world.teleportToChapter(gameState.chapter);
+      }
       musicManager.playChapterTrack(gameState.chapter);
+      this.renderHUD();
+      this.renderQuestTracker();
     };
 
     document.getElementById('btn-start-game')?.addEventListener('click', startLaunch);
-    document.getElementById('btn-start-adventure')?.addEventListener('click', startLaunch);
   }
 
   public openCertificateModal(): void {
     this.activeModal = 'certificate';
     gameState.storyFlags['opened_certificate'] = true;
     gameState.notify();
-    this.touchControls.setVisible(false);
+    this.touchControls?.setVisible(false);
+    this.hideChapterBanner();
     this.modalOverlay.style.display = 'flex';
 
     const rang = gameState.getChronistenRang();
@@ -651,7 +681,7 @@ export class UIScene extends Phaser.Scene {
         <div class="cert-border">
           <div class="cert-seal">📜</div>
           <h1>CHRONISTEN-DIPLOM</h1>
-          <h2>DER REFORMATION & MEDIENREVOLUTION</h2>
+          <h2>DER REFORMATION &amp; MEDIENREVOLUTION</h2>
           <p class="cert-salute">Hiermit wird feierlich beurkundet, dass</p>
           <div class="cert-name">${gameState.playerName}</div>
           <p class="cert-text">
@@ -664,209 +694,383 @@ export class UIScene extends Phaser.Scene {
           </div>
           <div class="cert-footer">
             <span>Hefter-Code: <strong>${gameState.generateHefterCode()}</strong></span>
-            <span>Gez. Lucas Cranach d. Ä. & Philipp Melanchthon</span>
+            <span>Gez. Lucas Cranach d. Ä. &amp; Philipp Melanchthon</span>
           </div>
         </div>
-        <button class="btn-primary mt-3" onclick="window.__printHefterSheet()">🖨️ A4-Hefterblatt drucken</button>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:14px;">
+          <button class="btn-primary" id="btn-cert-print">🖨️ A4-Hefterblatt drucken</button>
+          <button class="btn-sub" id="btn-cert-close">Schließen</button>
+        </div>
       </div>
     `;
+
+    document.getElementById('btn-cert-print')?.addEventListener('click', () => this.triggerDiplomPrint());
+    document.getElementById('btn-cert-close')?.addEventListener('click', () => this.closeModal());
   }
 
-  public openMentorDialog(mentor: MentorData, onClose?: () => void): void {
+  public openMentorDialog(mentorOrChapter: number | MentorData | ChapterData, onClose?: () => void): void {
     this.activeModal = 'dialog';
+    this.touchControls?.setVisible(false);
+    this.hideChapterBanner();
     this.modalOverlay.style.display = 'flex';
 
+    let chData: ChapterData = gameState.getChapterData();
+    if (typeof mentorOrChapter === 'number') {
+      chData = REFORMATION_CHAPTERS.find((c) => c.number === mentorOrChapter) || chData;
+    } else if (mentorOrChapter && 'mentor' in mentorOrChapter) {
+      chData = mentorOrChapter;
+    } else if (mentorOrChapter && 'name' in mentorOrChapter) {
+      chData =
+        REFORMATION_CHAPTERS.find((c) => c.mentor.name === mentorOrChapter.name) || chData;
+    }
+
+    const mentor = chData.mentor;
     const pKey = mentor.portraitKey || 'luther_young';
     const neutralSrc = `/assets/portraits/${pKey}_neutral.png`;
     const happySrc = `/assets/portraits/${pKey}_happy.png`;
 
-    const hasDilemma = REFORMATION_DILEMMAS.some(
-      (d) => d.chapter === gameState.chapter && !gameState.storyFlags[`dilemma_ch${d.chapter}_done`]
-    );
+    let quizMode = false;
+    let quizIdx = 0;
+    let quizCorrectCount = 0;
+    let quizAnswered = false;
 
-    this.modalOverlay.innerHTML = `
-      <div class="dialog-box-card">
-        <div class="dialog-speaker-header">
-          <div class="portrait-box-64">
-            <img id="mentor-portrait-img" src="${neutralSrc}" class="portrait-img-64" alt="${mentor.name}" />
+    const renderDialog = () => {
+      const objs = gameState.chapterObjectives[chData.number] || [false, false, false, false];
+      const nextStepIdx = objs.findIndex((o) => !o);
+      const activeHint =
+        nextStepIdx >= 0
+          ? chData.hintSteps?.[nextStepIdx] || chData.objectives[nextStepIdx]
+          : chData.successMessage;
+      const allDone = objs.every(Boolean);
+      const hasDilemma = REFORMATION_DILEMMAS.some(
+        (d) => d.chapter === chData.number && !gameState.storyFlags[`dilemma_ch${d.chapter}_done`]
+      );
+      const hasNextChapter = chData.number < 8;
+
+      if (!quizMode) {
+        this.modalOverlay.innerHTML = `
+          <div class="dialog-box-card">
+            <div class="dialog-speaker-header">
+              <div class="portrait-box-64">
+                <img id="mentor-portrait-img" src="${neutralSrc}" class="portrait-img-64" alt="${mentor.name}" />
+              </div>
+              <div class="speaker-info">
+                <span class="dialog-ch-tag">Kapitel ${chData.number} · ${chData.year}</span>
+                <h2 class="speaker-name">${mentor.name}</h2>
+                <span class="speaker-role">${mentor.role} · ${chData.location}</span>
+              </div>
+            </div>
+
+            <div class="dialog-content">
+              <p class="dialog-greeting">„${mentor.greeting}“</p>
+              <p class="dialog-speech-text">${mentor.speech}</p>
+              <div class="dialog-hint-box">
+                <strong>🧭 Nächster Schritt (${objs.filter(Boolean).length}/4):</strong> ${activeHint}
+              </div>
+            </div>
+
+            <div class="dialog-actions" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px;">
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button id="btn-start-quiz" class="btn-primary">🎓 Disputation (Kapitel-Quiz)</button>
+                ${
+                  hasDilemma
+                    ? `<button id="btn-open-dilemma" class="btn-dilemma-trigger">⚖️ Gewissensfrage</button>`
+                    : ''
+                }
+                ${
+                  (allDone || gameState.quizPerfect.has(chData.number) || gameState.completedChapters.has(chData.number)) && hasNextChapter
+                    ? `<button id="btn-advance-ch" class="btn-dilemma-trigger">⏭ Weiter zu Kapitel ${chData.number + 1} ➔</button>`
+                    : ''
+                }
+              </div>
+              <button id="btn-dialog-close" class="btn-sub">Weiter erkunden ➔</button>
+            </div>
           </div>
-          <div class="speaker-info">
-            <h2 class="speaker-name">${mentor.name}</h2>
-            <span class="speaker-role">${mentor.role}</span>
-          </div>
-        </div>
+        `;
 
-        <div class="dialog-content">
-          <p class="dialog-speech-text">${mentor.speech}</p>
-        </div>
+        document.getElementById('btn-start-quiz')?.addEventListener('click', () => {
+          sound.click();
+          quizMode = true;
+          quizIdx = 0;
+          quizCorrectCount = 0;
+          quizAnswered = false;
+          renderDialog();
+        });
 
-        <div class="dialog-actions" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-          ${
-            hasDilemma
-              ? `<button id="btn-open-dilemma" class="btn-dilemma-trigger">⚖️ Historische Gewissensfrage verhandeln</button>`
-              : `<div></div>`
+        document.getElementById('btn-open-dilemma')?.addEventListener('click', () => {
+          this.closeModal();
+          this.openDilemmaModal(chData.number, () => onClose?.());
+        });
+
+        document.getElementById('btn-advance-ch')?.addEventListener('click', () => {
+          sound.success();
+          const nextCh = chData.number + 1;
+          gameState.completedChapters.add(chData.number);
+          gameState.maxUnlockedChapter = Math.max(gameState.maxUnlockedChapter, nextCh);
+          this.closeModal();
+          const world = this.scene.get('WorldScene') as WorldScene;
+          if (world) {
+            world.teleportToChapter(nextCh);
+          } else {
+            gameState.selectStartChapter(nextCh);
           }
-          <button id="btn-dialog-close" class="btn-primary">Verstanden, ich mache mich an die Arbeit ➔</button>
-        </div>
-      </div>
-    `;
+          onClose?.();
+        });
 
-    document.getElementById('btn-open-dilemma')?.addEventListener('click', () => {
-      this.closeModal();
-      this.openDilemmaModal(gameState.chapter, () => {
-        onClose?.();
-      });
-    });
+        document.getElementById('btn-dialog-close')?.addEventListener('click', () => {
+          const img = document.getElementById('mentor-portrait-img') as HTMLImageElement | null;
+          if (img) img.src = happySrc;
+          sound.questStep();
+          setTimeout(() => {
+            this.closeModal();
+            onClose?.();
+          }, 220);
+        });
+      } else {
+        const q = chData.quiz[quizIdx];
+        const isLastQ = quizIdx >= chData.quiz.length - 1;
 
-    document.getElementById('btn-dialog-close')?.addEventListener('click', () => {
-      const img = document.getElementById('mentor-portrait-img') as HTMLImageElement | null;
-      if (img) {
-        img.src = happySrc;
-        img.style.transform = 'scale(1.08)';
+        this.modalOverlay.innerHTML = `
+          <div class="dialog-box-card">
+            <div class="dialog-speaker-header">
+              <div class="portrait-box-64">
+                <img id="mentor-portrait-img" src="${neutralSrc}" class="portrait-img-64" alt="${mentor.name}" />
+              </div>
+              <div class="speaker-info">
+                <span class="dialog-ch-tag">Disputation · Frage ${quizIdx + 1} von ${chData.quiz.length}</span>
+                <h2 class="speaker-name">${mentor.name} prüft dein Wissen</h2>
+                <span class="speaker-role">Kapitel ${chData.number}: ${chData.title}</span>
+              </div>
+            </div>
+
+            <div class="dialog-content">
+              <div class="quiz-question" style="font-size:14.5px; font-weight:700; color:#2c1a0e; margin-bottom:10px;">${q.question}</div>
+              <div class="quiz-options" style="display:flex; flex-direction:column; gap:8px;">
+                ${q.options
+                  .map(
+                    (opt, oi) => `
+                  <button class="quiz-opt-btn dialog-quiz-opt" data-idx="${oi}">${opt}</button>
+                `
+                  )
+                  .join('')}
+              </div>
+              <div id="dialog-quiz-fb" class="quiz-feedback" style="display:none; margin-top:10px;"></div>
+            </div>
+
+            <div class="dialog-actions" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <button id="btn-quiz-back" class="btn-sub">← Zurück zum Gespräch</button>
+              <div style="display:flex; gap:8px;">
+                <button id="btn-quiz-next" class="btn-primary" style="display:none;">
+                  ${isLastQ ? 'Disputation abschließen ✓' : 'Nächste Frage ➜'}
+                </button>
+                ${
+                  isLastQ && chData.number < 8
+                    ? `<button id="btn-quiz-next-ch" class="btn-dilemma-trigger" style="display:none;">⏭ Weiter zu Kapitel ${chData.number + 1} ➔</button>`
+                    : ''
+                }
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btn-quiz-back')?.addEventListener('click', () => {
+          quizMode = false;
+          renderDialog();
+        });
+
+        const fbEl = document.getElementById('dialog-quiz-fb');
+        const nextBtn = document.getElementById('btn-quiz-next') as HTMLButtonElement | null;
+        const nextChBtn = document.getElementById('btn-quiz-next-ch') as HTMLButtonElement | null;
+
+        this.modalOverlay.querySelectorAll('.dialog-quiz-opt').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            if (quizAnswered) return;
+            const chosen = parseInt(btn.getAttribute('data-idx') || '0', 10);
+            const isCorrect = chosen === q.correct;
+            quizAnswered = true;
+
+            this.modalOverlay
+              .querySelectorAll('.dialog-quiz-opt')
+              .forEach((b) => ((b as HTMLButtonElement).disabled = true));
+
+            if (isCorrect) {
+              quizCorrectCount++;
+              btn.classList.add('correct');
+              const img = document.getElementById('mentor-portrait-img') as HTMLImageElement | null;
+              if (img) img.src = happySrc;
+              sound.success();
+              if (fbEl) {
+                fbEl.style.display = 'block';
+                fbEl.className = 'quiz-feedback correct';
+                fbEl.innerHTML = `✅ Richtig! ${q.explanation}`;
+              }
+            } else {
+              btn.classList.add('wrong');
+              sound.click();
+              if (fbEl) {
+                fbEl.style.display = 'block';
+                fbEl.className = 'quiz-feedback wrong';
+                fbEl.innerHTML = `💡 Auflösung: ${q.explanation}`;
+              }
+            }
+
+            if (nextBtn) nextBtn.style.display = 'inline-block';
+            if (isLastQ && isCorrect && nextChBtn) {
+              nextChBtn.style.display = 'inline-block';
+            }
+
+            if (isLastQ) {
+              if (quizCorrectCount === chData.quiz.length) {
+                gameState.quizPerfect.add(chData.number);
+                gameState.knowledge = Math.min(100, gameState.knowledge + 10);
+              }
+              if ([4, 6, 7].includes(chData.number)) {
+                gameState.completeObjective(chData.number, 3);
+              } else {
+                gameState.completeObjective(chData.number, 0);
+              }
+              gameState.notify();
+            }
+          });
+        });
+
+        nextBtn?.addEventListener('click', () => {
+          if (!isLastQ) {
+            quizIdx++;
+            quizAnswered = false;
+            renderDialog();
+          } else {
+            this.showToast(`🎓 Disputation zu Kapitel ${chData.number} abgelegt!`);
+            this.closeModal();
+            onClose?.();
+          }
+        });
+
+        nextChBtn?.addEventListener('click', () => {
+          const nextCh = chData.number + 1;
+          gameState.completedChapters.add(chData.number);
+          gameState.maxUnlockedChapter = Math.max(gameState.maxUnlockedChapter, nextCh);
+          this.closeModal();
+          const world = this.scene.get('WorldScene') as WorldScene;
+          if (world) world.teleportToChapter(nextCh);
+          else gameState.selectStartChapter(nextCh);
+          onClose?.();
+        });
       }
-      sound.success();
-      setTimeout(() => {
-        this.closeModal();
-        onClose?.();
-      }, 350);
-    });
+    };
+
+    renderDialog();
   }
 
   public openDilemmaModal(chapterNum?: number, onFinish?: () => void): void {
     const ch = chapterNum ?? gameState.chapter;
-    const dilemma = REFORMATION_DILEMMAS.find((d) => d.chapter === ch);
+    const dilemma = REFORMATION_DILEMMAS.find((d) => d.chapter === ch) || REFORMATION_DILEMMAS[0];
     if (!dilemma) return;
 
     this.activeModal = 'dilemma';
+    this.touchControls?.setVisible(false);
     this.dilemmaModal.open(dilemma, (choice) => {
-      gameState.storyFlags[`dilemma_ch${ch}_done`] = true;
-      gameState.dilemmaSummary += (gameState.dilemmaSummary ? ' | ' : '') + `K${ch}: ${choice.text}`;
-      gameState.courage += Math.round(choice.points / 2);
-      gameState.knowledge += Math.round(choice.points / 2);
+      gameState.storyFlags[`dilemma_ch${dilemma.chapter}_done`] = true;
+      gameState.dilemmaSummary += (gameState.dilemmaSummary ? ' | ' : '') + `K${dilemma.chapter}: ${choice.text}`;
+      gameState.courage = Math.min(100, gameState.courage + Math.round(choice.points / 2));
+      gameState.knowledge = Math.min(100, gameState.knowledge + Math.round(choice.points / 2));
+      if (dilemma.chapter === 3) gameState.completeObjective(3, 3);
+      if (dilemma.chapter === 7) gameState.completeObjective(7, 2);
+      gameState.notify();
       this.showToast(`⚖️ Gewissensentscheidung: +${choice.points} Punkte!`);
-      this.renderHUD();
       this.closeModal();
       onFinish?.();
     });
   }
 
   public openRelicModal(relic: ReformationRelic): void {
-    this.activeModal = 'relic';
+    this.openArtifactInspector(relic);
+  }
+
+  public openCraftingModal(): void {
+    this.activeModal = 'craft';
+    this.touchControls?.setVisible(false);
+    this.hideChapterBanner();
     this.modalOverlay.style.display = 'flex';
 
-    const aversTitle = relic.aversTitle || relic.name;
-    const aversDetails = relic.aversDetails || relic.description;
-    const reversTitle = relic.reversTitle || 'Rückseite & Siegelabdruck';
-    const reversDetails = relic.reversDetails || relic.historicalSignificance;
-    const didacticSummary = relic.didacticSummary || relic.explanation;
-
     this.modalOverlay.innerHTML = `
-      <div class="relic-modal-card">
-        <div class="relic-header">
-          <span class="relic-epoch">${relic.epoch} • ${relic.year}</span>
-          <h2 class="relic-name">${relic.name}</h2>
-          <span class="relic-location">Fundort: ${relic.location}</span>
+      <div class="inventory-card">
+        <div class="modal-header">
+          <div>
+            <span class="relic-epoch">Druckerei &amp; Klosterapotheke</span>
+            <h2>⚙️ Werkstatt &amp; Handwerkskammer</h2>
+          </div>
+          <button id="btn-craft-close" class="btn-close">✕</button>
         </div>
 
-        <div class="relic-body">
-          <div class="relic-flip-container">
-            <div id="relic-flip-card" class="relic-flip-card">
-              <!-- AVERS -->
-              <div class="relic-flip-face relic-face-avers">
-                <div class="relic-stamp">AVERS • VORDERSEITE DER ORIGINALQUELLE</div>
-                <div class="relic-icon-center">
-                  <img src="${relic.icon}" class="relic-large-icon" alt="${relic.name}" />
-                </div>
-                <h3 class="relic-face-title">${aversTitle}</h3>
-                <p class="relic-desc">${aversDetails}</p>
-              </div>
-
-              <!-- REVERS -->
-              <div class="relic-flip-face relic-face-revers">
-                <div class="relic-stamp">REVERS • RÜCKSEITE, SIEGEL & ZEUGNIS</div>
-                <div class="relic-icon-center">
-                  <span style="font-size: 38px; display:inline-block; margin: 6px 0;">📜</span>
-                </div>
-                <h3 class="relic-face-title">${reversTitle}</h3>
-                <p class="relic-desc">${reversDetails}</p>
-              </div>
-            </div>
+        <div class="craft-banner-box">
+          <div>
+            <strong>📜 Gutenberg-Satzkasten Übung</strong>
+            <div style="font-size:12px; color:#5c3d22;">Setze Bleilettern spiegelverkehrt für das Flugblatt „SOLA FIDE“.</div>
           </div>
-
-          <div style="text-align: center; margin: 10px 0 14px 0;">
-            <button id="btn-relic-flip" class="btn-sub" style="font-size: 11.5px; font-weight: 700; background: #fef3c7; border: 1.5px solid #b45309; color: #78350f;">
-              🔄 Fundstück wenden (360° Avers / Revers)
-            </button>
-          </div>
-
-          <div class="relic-didactic-box">
-            <span class="didactic-badge">💡 Didaktischer Merksatz für den Unterricht</span>
-            <p>${didacticSummary}</p>
-          </div>
-
-          <div class="relic-quiz-box">
-            <div class="quiz-question">${relic.question}</div>
-            <div class="quiz-options">
-              ${relic.options
-                .map(
-                  (opt, idx) => `
-                <button class="quiz-opt-btn" data-index="${idx}">${opt}</button>
-              `
-                )
-                .join('')}
-            </div>
-            <div id="quiz-feedback" class="quiz-feedback" style="display:none;"></div>
-          </div>
+          <button id="btn-open-gutenberg" class="btn-primary">Gutenberg-Presse starten ➔</button>
         </div>
 
-        <div class="relic-footer" style="margin-top:14px; display:flex; justify-content:flex-end;">
-          <button id="btn-relic-close" class="btn-sub">Schließen [ESC]</button>
+        <h3 style="margin:14px 0 8px 0; color:#78350f; font-size:14px;">Verfügbare Handwerks-Rezepte</h3>
+        <div class="recipes-list">
+          ${REFORMATION_RECIPES.map((r) => {
+            const canCraft = r.ingredients.every((ing) => gameState.hasItem(ing.item, ing.count));
+            const outDef = REFORMATION_ITEMS[r.outputItem];
+            return `
+              <div class="recipe-card">
+                <div class="recipe-header">
+                  <strong>${r.name} (${r.outputCount}× ${outDef?.name || r.outputItem})</strong>
+                  <span class="recipe-desc">${r.description}</span>
+                </div>
+                <div class="recipe-costs">
+                  Zutaten: ${r.ingredients
+                    .map((ing) => {
+                      const have = gameState.inventory[ing.item] || 0;
+                      const nm = REFORMATION_ITEMS[ing.item]?.name || ing.item;
+                      return `<span class="${have >= ing.count ? 'ing-ok' : 'ing-miss'}">${have}/${ing.count} ${nm}</span>`;
+                    })
+                    .join(' · ')}
+                </div>
+                <button class="btn-craft" data-recipe="${r.id}" ${canCraft ? '' : 'disabled'}>Herstellen ➔</button>
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
     `;
 
-    // 3D Flip toggle
-    const flipCard = document.getElementById('relic-flip-card');
-    document.getElementById('btn-relic-flip')?.addEventListener('click', () => {
+    document.getElementById('btn-craft-close')?.addEventListener('click', () => this.closeModal());
+    document.getElementById('btn-open-gutenberg')?.addEventListener('click', () => {
       sound.click();
-      flipCard?.classList.toggle('flipped');
+      this.openGutenbergWorkshopModal(() => this.openCraftingModal());
     });
 
-    const btns = this.modalOverlay.querySelectorAll('.quiz-opt-btn');
-    const fb = document.getElementById('quiz-feedback');
-
-    btns.forEach((btn) => {
+    this.modalOverlay.querySelectorAll('.btn-craft').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-index') || '0', 10);
-        btns.forEach((b) => ((b as HTMLButtonElement).disabled = true));
-
-        if (fb) {
-          fb.style.display = 'block';
-          if (idx === relic.correctOption) {
-            fb.className = 'quiz-feedback correct';
-            fb.innerHTML = `✓ Richtig! ${relic.explanation}`;
-            sound.success();
-            gameState.discoverRelic(relic.id);
-            gameState.completeObjective(gameState.chapter, 3);
-          } else {
-            fb.className = 'quiz-feedback wrong';
-            fb.innerHTML = `✕ Leider nicht ganz richtig. Hinweis: ${relic.explanation}`;
-            sound.click();
-            gameState.discoverRelic(relic.id);
-          }
+        const recId = btn.getAttribute('data-recipe');
+        if (!recId) return;
+        if (gameState.craft(recId)) {
+          sound.success();
+          this.showToast('🔨 Erfolgreich in der Werkstatt gefertigt!');
+          if (recId === 'recipe_flugschrift') gameState.completeObjective(2, 2);
+          if (recId === 'recipe_arznei' && gameState.chapter === 6) gameState.completeObjective(6, 2);
+          this.openCraftingModal();
+        } else {
+          sound.click();
+          this.showToast('Nicht genügend Rohstoffe im Beutel!');
         }
       });
     });
-
-    document.getElementById('btn-relic-close')?.addEventListener('click', () => this.closeModal());
   }
 
   public openGutenbergWorkshopModal(onComplete?: () => void): void {
     this.activeModal = 'station';
+    this.touchControls?.setVisible(false);
+    this.hideChapterBanner();
     this.modalOverlay.style.display = 'flex';
 
     let phase: 1 | 2 | 3 | 4 = 1;
-    let composedLetters: string[] = [];
+    const composedLetters: string[] = [];
     const targetWord = 'SOLA FIDE';
     const letterChoices = ['S', 'O', 'L', 'A', 'F', 'I', 'D', 'E', 'R', 'T', 'M', 'G', 'P'];
 
@@ -877,42 +1081,40 @@ export class UIScene extends Phaser.Scene {
           <div class="station-card" style="max-width: 680px;">
             <div class="modal-header">
               <div>
-                <span class="relic-epoch">Wittenberg 1517 • Werkstatt Cranach</span>
-                <h2>⚙️ Der Gutenberg-Setzkasten & Winkelhaken</h2>
+                <span class="relic-epoch">Wittenberg 1518 · Werkstatt Cranach</span>
+                <h2>⚙️ Der Gutenberg-Setzkasten &amp; Winkelhaken</h2>
               </div>
               <button id="btn-station-close" class="btn-close">✕</button>
             </div>
 
-            <div style="font-size:12px; color:#4b5563; margin-bottom:12px; line-height:1.4;">
-              Luthers Flugschrift <strong>„SOLA FIDE“</strong> (Allein durch den Glauben) muss im Winkelhaken gesetzt werden.
-              <br/><strong style="color:#b45309;">⚠️ Eisernes Druckergesetz:</strong> Der Bleistempel druckt spiegelverkehrt ab!
+            <div style="font-size:12.5px; color:#4b3524; margin-bottom:12px; line-height:1.45;">
+              Luthers Flugschrift <strong>„SOLA FIDE“</strong> (Allein durch den Glauben) wird im Winkelhaken gesetzt.
+              <br/><strong style="color:#92400e;">⚠️ Druckergesetz:</strong> Jede Bleiletter steht spiegelverkehrt im Winkelhaken!
             </div>
 
-            <!-- Winkelhaken (Composing Stick) -->
-            <div style="background:#1e293b; border:2px solid #94a3b8; border-radius:8px; padding:12px; margin-bottom:14px; text-align:center;">
-              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
-                Messing-Winkelhaken (Spiegelverkehrter Satz im Zeilenschiff)
+            <div style="background:#3e2a1a; border:2px solid #8b5a2b; border-radius:8px; padding:12px; margin-bottom:14px; text-align:center;">
+              <div style="font-size:10px; color:#f3d296; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
+                Messing-Winkelhaken (Spiegelverkehrter Satz)
               </div>
-              <div style="min-height:48px; background:#0f172a; border:1.5px dashed #475569; border-radius:6px; display:flex; align-items:center; justify-content:center; gap:6px; padding:4px 8px;">
+              <div style="min-height:48px; background:#23160c; border:1.5px dashed #b47d43; border-radius:6px; display:flex; align-items:center; justify-content:center; gap:6px; padding:4px 8px; flex-wrap:wrap;">
                 ${
                   composedLetters.length === 0
-                    ? '<span style="color:#64748b; font-size:11px;">[Setzkasten leer. Klicke unten auf die Bleilettern]</span>'
+                    ? '<span style="color:#d6b888; font-size:11px;">[Setzkasten leer · Bleilettern anklicken]</span>'
                     : composedLetters
                         .map((l) =>
                           l === ' '
-                            ? '<span style="display:inline-block; width:18px; height:32px; background:#334155; border-radius:3px; border:1px solid #475569;" title="Spatium (Leerzeichen)"></span>'
-                            : `<span style="display:inline-flex; width:28px; height:34px; background:#e2e8f0; color:#0f172a; font-family:\'Cinzel\',serif; font-weight:900; font-size:18px; border-radius:4px; border:2px solid #94a3b8; align-items:center; justify-content:center; box-shadow:inset 0 1px 3px rgba(0,0,0,0.3); transform:scaleX(-1) scaleY(-1);">${l}</span>`
+                            ? '<span style="display:inline-block; width:18px; height:32px; background:#5c3d24; border-radius:3px; border:1px solid #9c6f3e;"></span>'
+                            : `<span style="display:inline-flex; width:28px; height:34px; background:#e8dec8; color:#2c1a0e; font-family:'Cinzel',serif; font-weight:900; font-size:18px; border-radius:4px; border:2px solid #8b5a2b; align-items:center; justify-content:center; transform:scaleX(-1) scaleY(-1);">${l}</span>`
                         )
                         .join('')
                 }
               </div>
-              <div style="margin-top:6px; font-size:11px; color:${isComplete ? '#4ade80' : '#cbd5e1'}; font-weight:600;">
-                Gelesener Abdruck: „${composedLetters.join('')}“ ${isComplete ? '✓ (Exakt 9 Zeichen)' : ''}
+              <div style="margin-top:6px; font-size:11.5px; color:${isComplete ? '#86efac' : '#fde68a'}; font-weight:600;">
+                Gelesener Abdruck: „${composedLetters.join('')}“ ${isComplete ? '✓ (Exakt)' : ''}
               </div>
             </div>
 
-            <!-- Setzkasten (Lead Type Drawer) -->
-            <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:10px; margin-bottom:12px;">
+            <div style="background:#f9eccf; border:1px solid #d6b888; border-radius:8px; padding:10px; margin-bottom:12px;">
               <div style="font-size:11px; font-weight:700; color:#78350f; margin-bottom:6px;">
                 Bleilettern aus dem Setzkasten wählen:
               </div>
@@ -920,35 +1122,28 @@ export class UIScene extends Phaser.Scene {
                 ${letterChoices
                   .map(
                     (ch) => `
-                  <button class="btn-sub btn-letter" data-char="${ch}" style="min-width:34px; padding:6px 10px; font-weight:700; font-size:13px; font-family:\'Cinzel\',serif;">
+                  <button class="btn-sub btn-letter" data-char="${ch}" style="min-width:34px; padding:6px 10px; font-weight:700; font-size:13px;">
                     ${ch}
                   </button>
                 `
                   )
                   .join('')}
-                <button id="btn-space" class="btn-sub" style="padding:6px 12px; font-size:11px; font-weight:600;">
-                  ␣ Spatium (Leerzeichen)
-                </button>
-                <button id="btn-backspace" class="btn-sub" style="padding:6px 12px; font-size:11px; font-weight:600; color:#b91c1c;">
-                  ⌫ Rückgängig
-                </button>
+                <button id="btn-space" class="btn-sub">␣ Spatium</button>
+                <button id="btn-backspace" class="btn-sub" style="color:#991b1b;">⌫ Rückgängig</button>
               </div>
             </div>
 
-            <!-- Action Footer -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
               <button id="btn-cancel" class="btn-sub">Abbrechen</button>
               <button id="btn-next-phase" class="btn-primary" style="display:${isComplete ? 'inline-block' : 'none'};">
-                Schritt 2: Druckerschwärze auftragen 🖌️ ➔
+                Schritt 2: Druckerschwärze auftragen ➔
               </button>
             </div>
           </div>
         `;
 
-        document.getElementById('btn-workshop-close')?.addEventListener('click', () => this.closeModal());
         document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
         document.getElementById('btn-cancel')?.addEventListener('click', () => this.closeModal());
-
         this.modalOverlay.querySelectorAll('.btn-letter').forEach((btn) => {
           btn.addEventListener('click', () => {
             const ch = btn.getAttribute('data-char');
@@ -959,7 +1154,6 @@ export class UIScene extends Phaser.Scene {
             }
           });
         });
-
         document.getElementById('btn-space')?.addEventListener('click', () => {
           if (composedLetters.length > 0 && composedLetters[composedLetters.length - 1] !== ' ') {
             sound.click();
@@ -967,13 +1161,11 @@ export class UIScene extends Phaser.Scene {
             render();
           }
         });
-
         document.getElementById('btn-backspace')?.addEventListener('click', () => {
           sound.click();
           composedLetters.pop();
           render();
         });
-
         document.getElementById('btn-next-phase')?.addEventListener('click', () => {
           sound.success();
           phase = 2;
@@ -983,27 +1175,18 @@ export class UIScene extends Phaser.Scene {
         this.modalOverlay.innerHTML = `
           <div class="station-card" style="max-width: 680px;">
             <div class="modal-header">
-              <div>
-                <span class="relic-epoch">Schritt 2 von 4 • Farbküche</span>
-                <h2>🖌️ Druckerschwärze auftragen</h2>
-              </div>
+              <div><span class="relic-epoch">Schritt 2 von 4</span><h2>🖌️ Druckerschwärze auftragen</h2></div>
               <button id="btn-station-close" class="btn-close">✕</button>
             </div>
-
             <div style="text-align:center; padding:16px 0;">
-              <div style="font-size:42px; margin-bottom:8px;">🪵 🖌️ 📜</div>
-              <p style="font-size:13px; color:#374151; max-width:500px; margin:0 auto 16px; line-height:1.5;">
-                Die Bleilettern liegen fest im Zeilenschiff. Nun müssen die beiden ledernen <strong>Druckballen</strong> mit kochendem <em>Leinölfirnis</em> und feinstem <em>Kienruß</em> gleichmäßig über den Satz geschlagen werden.
+              <div style="font-size:40px; margin-bottom:8px;">🪵 🖌️ 📜</div>
+              <p style="font-size:13px; color:#3f2814; max-width:500px; margin:0 auto 16px; line-height:1.5;">
+                Die Bleilettern liegen im Zeilenschiff. Schlage die ledernen Druckballen mit Leinölfirnis und Kienruß gleichmäßig über den Satz.
               </p>
-
-              <button id="btn-apply-ink" class="btn-primary" style="padding:10px 24px; font-size:14px;">
-                Druckballen schlagen (Farbe auftragen) ➔
-              </button>
+              <button id="btn-apply-ink" class="btn-primary">Druckballen schlagen ➔</button>
             </div>
           </div>
         `;
-
-        document.getElementById('btn-workshop-close')?.addEventListener('click', () => this.closeModal());
         document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
         document.getElementById('btn-apply-ink')?.addEventListener('click', () => {
           sound.click();
@@ -1014,97 +1197,61 @@ export class UIScene extends Phaser.Scene {
         this.modalOverlay.innerHTML = `
           <div class="station-card" style="max-width: 680px;">
             <div class="modal-header">
-              <div>
-                <span class="relic-epoch">Schritt 3 von 4 • Spindelpresse</span>
-                <h2>⚙️ Die Druckerpresse spannen</h2>
-              </div>
+              <div><span class="relic-epoch">Schritt 3 von 4</span><h2>⚙️ Die Spindelpresse spannen</h2></div>
               <button id="btn-station-close" class="btn-close">✕</button>
             </div>
-
             <div style="text-align:center; padding:16px 0;">
-              <div style="font-size:46px; margin-bottom:10px;">🔩 📐 📜</div>
-              <p style="font-size:13px; color:#374151; max-width:500px; margin:0 auto 16px; line-height:1.5;">
-                Das feuchte Hadernpapier liegt auf dem Druckstock. Lege den hölzernen <strong>Schwengel</strong> der Eichenpresse mit vollem Körpereinsatz um, um den nötigen Druck zu erzeugen!
+              <div style="font-size:40px; margin-bottom:10px;">🔩 📐 📜</div>
+              <p style="font-size:13px; color:#3f2814; max-width:500px; margin:0 auto 16px; line-height:1.5;">
+                Das feuchte Hadernpapier liegt auf dem Druckstock. Lege den hölzernen Schwengel der Eichenpresse kraftvoll um!
               </p>
-
-              <button id="btn-press-lever" class="btn-primary" style="padding:12px 28px; font-size:14px; background:#b45309; border-color:#78350f;">
-                Presse mit Hebelzug spannen ⚙️
-              </button>
+              <button id="btn-press-lever" class="btn-primary">Presse mit Hebelzug spannen ⚙️</button>
             </div>
           </div>
         `;
-
-        document.getElementById('btn-workshop-close')?.addEventListener('click', () => this.closeModal());
         document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
         document.getElementById('btn-press-lever')?.addEventListener('click', () => {
           sound.door();
           phase = 4;
           render();
         });
-      } else if (phase === 4) {
+      } else {
         gameState.addItem('flugblatt_sola_fide', 1);
-        gameState.knowledge += 25;
-        gameState.courage += 10;
+        gameState.craftedOnce.add('flugschrift');
+        gameState.knowledge = Math.min(100, gameState.knowledge + 20);
+        gameState.courage = Math.min(100, gameState.courage + 10);
         gameState.completeObjective(2, 2);
         sound.questStep();
 
         this.modalOverlay.innerHTML = `
-          <div class="station-card" style="max-width: 680px; background:#fffbeb; border:2.5px solid #d97706;">
+          <div class="station-card" style="max-width: 680px;">
             <div class="modal-header">
-              <div>
-                <span class="relic-epoch" style="color:#b45309;">Meisterstück vollendet • Wittenberg 1517</span>
-                <h2 style="color:#78350f;">📜 Frischer Flugblatt-Abzug</h2>
-              </div>
+              <div><span class="relic-epoch">Meisterstück · Wittenberg</span><h2>📜 Frischer Flugblatt-Abzug</h2></div>
               <button id="btn-station-close" class="btn-close">✕</button>
             </div>
-
-            <!-- Historischer Flugblatt-Körper -->
-            <div style="background:#ffffff; border:2px solid #b45309; border-radius:8px; padding:20px; text-align:center; margin-bottom:16px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-              <div style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#78350f; margin-bottom:8px;">
-                Disputatio pro declaratione virtutis indulgentiarum
-              </div>
-              <h1 style="font-family:\'Cinzel\',serif; font-size:26px; color:#991b1b; margin:6px 0 10px; font-weight:900; letter-spacing:3px;">
-                SOLA FIDE
-              </h1>
-              <div style="font-size:13px; font-weight:600; color:#1f2937; margin-bottom:12px;">
-                Allein durch den Glauben • Aus Gnade gerechtfertigt
-              </div>
-              <p style="font-size:12px; color:#4b5563; line-height:1.6; max-width:520px; margin:0 auto; font-style:italic;">
-                „Der Gerechte wird aus dem Glauben leben. Weder Gold noch Tetzels Ablassbriefe erlösen die Seele vor Gott, sondern allein das lebendige Vertrauen auf das Evangelium Christi.“
+            <div style="background:#fffdf7; border:2px solid #8b5a2b; border-radius:8px; padding:18px; text-align:center; margin-bottom:14px;">
+              <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:2px; color:#78350f;">Disputatio · Wittenberg</div>
+              <h1 style="font-family:'Cinzel',serif; font-size:26px; color:#991b1b; margin:6px 0 8px;">SOLA FIDE</h1>
+              <p style="font-size:12px; color:#3f2814; line-height:1.5; max-width:500px; margin:0 auto; font-style:italic;">
+                „Allein durch den Glauben und Gottes Gnade wird der Mensch gerecht.“
               </p>
-              <div style="margin-top:14px; font-size:10px; color:#9ca3af; border-top:1px solid #e5e7eb; padding-top:8px;">
-                Gedruckt in der Offizin Lucas Cranach d. Ä. zu Wittenberg im Jahre des Herrn 1517
-              </div>
             </div>
-
-            <!-- Belohnung -->
-            <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:10px 14px; font-size:12px; color:#065f46; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-              <span>🏆 <strong>Gegenstand erhalten:</strong> Flugblatt „SOLA FIDE“ (1517)</span>
-              <span><strong>+25 Bildung</strong> · <strong>+10 Mut</strong></span>
+            <div style="background:#dcfce7; border:1px solid #16a34a; border-radius:6px; padding:10px 14px; font-size:12px; color:#14532d; margin-bottom:14px; display:flex; justify-content:space-between;">
+              <span>🏆 <strong>Erhalten:</strong> Flugblatt „SOLA FIDE“</span>
+              <span><strong>+20 Wissen · +10 Mut</strong></span>
             </div>
-
             <div style="text-align:right;">
-              <button id="btn-finish-workshop" class="btn-primary" style="padding:10px 22px;">
-                Flugblatt einstecken &amp; weiterziehen ➔
-              </button>
+              <button id="btn-finish-workshop" class="btn-primary">Flugblatt einstecken ➔</button>
             </div>
           </div>
         `;
-
-        const handleClose = () => {
+        const finish = () => {
           this.closeModal();
-          this.renderHUD();
-          if (onComplete) onComplete();
+          this.showToast('📜 Flugblatt „SOLA FIDE“ im Beutel verstaut!');
+          onComplete?.();
         };
-        document.getElementById('btn-workshop-close')?.addEventListener('click', handleClose);
-        document.getElementById('btn-station-close')?.addEventListener('click', handleClose);
-
-        document.getElementById('btn-finish-workshop')?.addEventListener('click', () => {
-          this.closeModal();
-          this.renderHUD();
-          this.showToast('📜 Flugblatt „SOLA FIDE“ im Inventar verstaut!');
-          if (onComplete) onComplete();
-        });
+        document.getElementById('btn-station-close')?.addEventListener('click', finish);
+        document.getElementById('btn-finish-workshop')?.addEventListener('click', finish);
       }
     };
 
@@ -1112,177 +1259,70 @@ export class UIScene extends Phaser.Scene {
   }
 
   public openStationModal(stationId: string): void {
-    if (stationId === 'station_druckerei') {
-      this.openGutenbergWorkshopModal();
-      return;
-    }
-
-    const station = REFORMATION_STATIONS.find((s) => s.id === stationId);
-    if (!station) return;
-
-    this.activeModal = 'station';
-    this.modalOverlay.style.display = 'flex';
-
-    let currentStepIdx = 0;
-    let stepCompleted = false;
-
-    const render = () => {
-      const step = station.steps[currentStepIdx];
-      const isLastStep = currentStepIdx === station.steps.length - 1;
-
-      this.modalOverlay.innerHTML = `
-        <div class="station-card">
-          <div class="modal-header">
-            <div>
-              <span class="relic-epoch">${station.location} • ${station.badge}</span>
-              <h2>⚙️ ${station.name}</h2>
-            </div>
-            <button id="btn-station-close" class="btn-close">✕</button>
-          </div>
-
-          <div style="font-size:12px; color:#4b5563; margin-bottom:12px; line-height:1.4;">
-            ${station.intro}
-          </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:11px; font-weight:700; color:#92400e; background:#fef3c7; padding:4px 10px; border-radius:6px; border:1px solid #fde68a;">
-            <span>${step.title}</span>
-            <span>Schritt ${currentStepIdx + 1} von ${station.steps.length}</span>
-          </div>
-
-          <div class="quiz-box" style="margin-top:0;">
-            <div class="quiz-question" style="font-weight:600; color:#1f2937; margin-bottom:8px;">${step.prompt}</div>
-            <div class="quiz-options">
-              ${step.options
-                .map(
-                  (opt, idx) => `
-                <button class="quiz-opt-btn station-opt-btn" data-index="${idx}">${opt.text}</button>
-              `
-                )
-                .join('')}
-            </div>
-            <div id="station-feedback" class="quiz-feedback" style="display:none;"></div>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
-            <span style="font-size:11px; color:#6b7280;">Epochensäule: ${station.historicalPillar}</span>
-            <div style="display:flex; gap:8px;">
-              <button id="btn-station-next" class="btn-primary" style="display:${stepCompleted ? 'inline-block' : 'none'};">
-                ${isLastStep ? 'Station abschließen ✓' : 'Nächster Schritt →'}
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-
-      document.getElementById('btn-station-close')?.addEventListener('click', () => this.closeModal());
-
-      const btns = this.modalOverlay.querySelectorAll('.station-opt-btn');
-      const fb = document.getElementById('station-feedback');
-      const nextBtn = document.getElementById('btn-station-next') as HTMLButtonElement | null;
-
-      btns.forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const idx = parseInt(btn.getAttribute('data-index') || '0', 10);
-          const selectedOpt = step.options[idx];
-
-          if (selectedOpt.isCorrect) {
-            btns.forEach((b) => ((b as HTMLButtonElement).disabled = true));
-            btn.classList.add('correct');
-            if (fb) {
-              fb.style.display = 'block';
-              fb.className = 'quiz-feedback correct';
-              fb.innerHTML = `✓ Ausgezeichnet! ${selectedOpt.feedback}`;
-            }
-            sound.success();
-            stepCompleted = true;
-            if (nextBtn) nextBtn.style.display = 'inline-block';
-          } else {
-            if (fb) {
-              fb.style.display = 'block';
-              fb.className = 'quiz-feedback wrong';
-              fb.innerHTML = `✕ Noch nicht ganz: ${selectedOpt.feedback}`;
-            }
-            sound.click();
-          }
-        });
-      });
-
-      nextBtn?.addEventListener('click', () => {
-        sound.click();
-        if (isLastStep) {
-          gameState.completeObjective(station.chapter, 2);
-          gameState.knowledge += 15;
-          gameState.courage += 5;
-          this.closeModal();
-          this.showToast(`🏆 Station '${station.name}' gemeistert! (+15 Bildung, +5 Mut)`);
-          this.renderHUD();
-          sound.questStep();
-        } else {
-          currentStepIdx++;
-          stepCompleted = false;
-          render();
-        }
-      });
-    };
-
-    render();
+    this.openStation(stationId);
   }
 
   public openInventory(): void {
     this.activeModal = 'inventory';
+    this.touchControls?.setVisible(false);
+    this.hideChapterBanner();
     this.modalOverlay.style.display = 'flex';
 
-    const items = Object.entries(gameState.inventory);
+    const items = Object.entries(gameState.inventory).filter(([, c]) => (c || 0) > 0);
+    const edibleIds = new Set(['brot_fladen', 'apfel', 'bier_krug']);
 
     this.modalOverlay.innerHTML = `
       <div class="inventory-card">
         <div class="modal-header">
-          <h2>🎒 Chronik-Tasche & Werkstatt</h2>
+          <div>
+            <span class="relic-epoch">Reisegepäck &amp; Quellensammlung</span>
+            <h2>🎒 Chronisten-Beutel &amp; Geborgene Relikte</h2>
+          </div>
           <button id="btn-inv-close" class="btn-close">✕</button>
         </div>
 
         <div class="inv-split-container">
           <div class="inv-left">
-            <h3>Mitgeführte Gegenstände</h3>
+            <h3>Gegenstände im Beutel (${items.length})</h3>
             <div class="inv-grid">
               ${
                 items.length > 0
                   ? items
                       .map(([id, count]) => {
                         const itemDef = REFORMATION_ITEMS[id as ReformationItemId];
+                        const isFood = edibleIds.has(id);
                         return `
                         <div class="inv-item-slot">
-                          <img src="${itemDef?.icon || '/assets/icons/relic_codex.png'}" class="slot-icon" />
+                          <img src="${itemDef?.icon || '/assets/icons/relic_codex.png'}" class="slot-icon" alt="${itemDef?.name || id}" />
                           <div class="slot-info">
                             <strong>${itemDef?.name || id}</strong>
-                            <span>Anzahl: ${count}</span>
+                            <span>Menge: ${count} · ${itemDef?.category || 'Sache'}</span>
                           </div>
+                          ${isFood ? `<button class="btn-sub btn-eat-slot" style="font-size:10.5px; padding:4px 8px;">Essen</button>` : ''}
                         </div>
                       `;
                       })
                       .join('')
-                  : '<div class="empty-hint">Tasche ist leer. Sammle Papier, Holz und Lettern in der Werkstatt!</div>'
+                  : '<div class="empty-hint">Der Beutel ist noch leer. Sammle Kisten &amp; Kräuter!</div>'
               }
             </div>
           </div>
 
           <div class="inv-right">
-            <h3>Druckerei & Handwerk (Rezepte)</h3>
+            <h3>Geborgene Primärquellen (${gameState.discoveredRelics.size} / ${REFORMATION_RELICS.length})</h3>
             <div class="recipes-list">
-              ${REFORMATION_RECIPES.map(
-                (r) => `
-                <div class="recipe-card">
-                  <div class="recipe-header">
-                    <strong>${r.name}</strong>
-                    <span class="recipe-desc">${r.description}</span>
+              ${REFORMATION_RELICS.map((r) => {
+                const found = gameState.discoveredRelics.has(r.id);
+                return `
+                  <div class="recipe-card ${found ? '' : 'locked-relic-card'}">
+                    <div class="recipe-header">
+                      <strong>${found ? r.name : '🔒 Unentdeckte Quelle'}</strong>
+                      <span class="recipe-desc">${found ? `${r.year} · ${r.location}` : `Fundort: ${r.location}`}</span>
+                    </div>
+                    ${found ? `<button class="btn-sub btn-inspect-relic" data-relic="${r.id}">360° Öffnen</button>` : ''}
                   </div>
-                  <div class="recipe-costs">
-                    Zutaten: ${r.ingredients.map((ing) => `${ing.count}x ${REFORMATION_ITEMS[ing.item]?.name || ing.item}`).join(', ')}
-                  </div>
-                  <button class="btn-craft" data-recipe="${r.id}">Herstellen ➔</button>
-                </div>
-              `
-              ).join('')}
+                `;
+              }).join('')}
             </div>
           </div>
         </div>
@@ -1290,28 +1330,24 @@ export class UIScene extends Phaser.Scene {
     `;
 
     document.getElementById('btn-inv-close')?.addEventListener('click', () => this.closeModal());
-
-    const craftBtns = this.modalOverlay.querySelectorAll('.btn-craft');
-    craftBtns.forEach((btn) => {
+    this.modalOverlay.querySelectorAll('.btn-eat-slot').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const recId = btn.getAttribute('data-recipe');
-        if (recId) {
-          const success = gameState.craft(recId);
-          if (success) {
-            sound.success();
-            this.showToast('Gegenstand erfolgreich hergestellt!');
-            this.openInventory();
-          } else {
-            sound.click();
-            this.showToast('Nicht genügend Rohstoffe vorhanden!');
-          }
-        }
+        this.eatFood();
+        this.openInventory();
+      });
+    });
+    this.modalOverlay.querySelectorAll('.btn-inspect-relic').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const rid = btn.getAttribute('data-relic');
+        if (rid) this.openArtifactInspector(rid);
       });
     });
   }
 
   public openLexiconModal(): void {
     this.activeModal = 'lexicon';
+    this.touchControls?.setVisible(false);
+    this.hideChapterBanner();
     this.modalOverlay.style.display = 'flex';
 
     gameState.checkLexiconUnlocks();
@@ -1344,7 +1380,7 @@ export class UIScene extends Phaser.Scene {
         <div class="modal-header">
           <div>
             <span class="relic-epoch">Geschichts-Nachschlagewerk</span>
-            <h2>📖 Lexikon der Reformation (${unlockedCount} / ${REFORMATION_LEXICON.length} Begriffe freigeschaltet)</h2>
+            <h2>📖 Lexikon der Reformation (${unlockedCount} / ${REFORMATION_LEXICON.length} freigeschaltet)</h2>
           </div>
           <button id="btn-lex-close" class="btn-close">✕</button>
         </div>
@@ -1384,14 +1420,12 @@ export class UIScene extends Phaser.Scene {
             ${
               isUnlocked
                 ? `
-              <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                 <div>
                   <span class="detail-cat" style="font-size:11px; font-weight:700; color:#b45309; text-transform:uppercase;">${selectedEntry.category}</span>
                   <h3 class="detail-term" style="font-family:'Cinzel',serif; font-size:18px; font-weight:800; color:#78350f; margin:4px 0 10px 0;">${selectedEntry.term}</h3>
                 </div>
-                <button id="btn-lex-speak" class="btn-sub" style="font-size:11px; padding:5px 10px;" title="Begriff vorlesen">
-                  🔊 Vorlesen
-                </button>
+                <button id="btn-lex-speak" class="btn-sub" style="font-size:11px; padding:5px 10px;">🔊 Vorlesen</button>
               </div>
               <div class="detail-def" style="margin-top:8px; font-size:12.5px; line-height:1.5; color:#1f2937;">
                 <strong>Definition:</strong> ${selectedEntry.definition}
@@ -1400,23 +1434,16 @@ export class UIScene extends Phaser.Scene {
                 <strong>Historischer Kontext:</strong> ${selectedEntry.historicalContext}
               </div>
               <div class="detail-merksatz" style="margin-top:14px; background:#ecfdf5; border:1px solid #10b981; border-radius:8px; padding:10px 12px; font-size:11.5px; color:#065f46; line-height:1.45;">
-                <strong style="display:block; margin-bottom:2px;">💡 Merksatz für die Geschichtsstunde:</strong>
+                <strong style="display:block; margin-bottom:2px;">💡 Merksatz:</strong>
                 ${selectedEntry.merksatz}
               </div>
             `
                 : `
               <div class="lex-locked-placeholder" style="text-align:center; padding:32px 16px;">
                 <div style="font-size:42px; margin-bottom:10px;">🔒</div>
-                <h3 style="font-family:'Cinzel',serif; color:#78350f; margin-bottom:8px;">${selectedEntry.term} ist noch versiegelt</h3>
-                <p style="font-size:12px; color:#6b7280; line-height:1.5; max-width:380px; margin:0 auto 16px;">
-                  Diesen geschichtlichen Begriff hast du noch nicht erforscht. Erforsche die Epoche, um das Wissen freizuschalten!
-                </p>
+                <h3 style="font-family:'Cinzel',serif; color:#78350f; margin-bottom:8px;">${selectedEntry.term} ist versiegelt</h3>
                 <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:8px; padding:12px; max-width:380px; margin:0 auto; font-size:12px; color:#92400e; text-align:left;">
-                  <strong>💡 Such-Tipp zum Freischalten:</strong><br/>
-                  ${selectedEntry.unlockHint}
-                  <div style="margin-top:6px; font-size:10.5px; color:#b45309;">
-                    Kapitel: Ab Kapitel ${selectedEntry.minChapter} verfügbar
-                  </div>
+                  <strong>💡 Freischalt-Hinweis:</strong> ${selectedEntry.unlockHint} (Ab Kapitel ${selectedEntry.minChapter})
                 </div>
               </div>
             `
@@ -1427,7 +1454,6 @@ export class UIScene extends Phaser.Scene {
     `;
 
     document.getElementById('btn-lex-close')?.addEventListener('click', () => this.closeModal());
-
     this.modalOverlay.querySelectorAll('.lex-cat-pill').forEach((pill) => {
       pill.addEventListener('click', () => {
         const cat = pill.getAttribute('data-cat');
@@ -1438,26 +1464,23 @@ export class UIScene extends Phaser.Scene {
         }
       });
     });
-
     this.modalOverlay.querySelectorAll('.lex-list-item').forEach((item) => {
       item.addEventListener('click', () => {
         const id = item.getAttribute('data-id');
         if (id) {
           this.selectedLexiconId = id;
           sound.click();
-          if (gameState.unlockedLexicon.has(id)) {
-            gameState.markLexiconRead(id);
-          }
+          if (gameState.unlockedLexicon.has(id)) gameState.markLexiconRead(id);
           this.openLexiconModal();
         }
       });
     });
-
     document.getElementById('btn-lex-speak')?.addEventListener('click', () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        const text = `${selectedEntry.term}. ${selectedEntry.definition} ${selectedEntry.merksatz}`;
-        const utter = new SpeechSynthesisUtterance(text);
+        const utter = new SpeechSynthesisUtterance(
+          `${selectedEntry.term}. ${selectedEntry.definition} ${selectedEntry.merksatz}`
+        );
         utter.lang = 'de-DE';
         utter.rate = 0.95;
         window.speechSynthesis.speak(utter);
@@ -1470,14 +1493,21 @@ export class UIScene extends Phaser.Scene {
 
   public openPauseDashboard(): void {
     this.activeModal = 'pause';
+    this.touchControls?.setVisible(false);
+    this.hideChapterBanner();
     this.modalOverlay.style.display = 'flex';
 
     const rang = gameState.getChronistenRang();
+    const totalSec = Math.max(0, Math.floor(gameState.playTimeSeconds));
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const ss = String(totalSec % 60).padStart(2, '0');
+    const hefterCode = gameState.generateHefterCode();
+    const volPct = Math.round(musicManager.getVolume() * 100);
 
     this.modalOverlay.innerHTML = `
       <div class="pause-card">
         <div class="modal-header">
-          <h2>⚙️ Chronisten-Dashboard & Einstellungen</h2>
+          <h2>⚙️ Chronisten-Dashboard (7 Kacheln)</h2>
           <button id="btn-pause-close" class="btn-close">✕</button>
         </div>
 
@@ -1490,37 +1520,40 @@ export class UIScene extends Phaser.Scene {
           <div class="pause-tile">
             <span class="tile-icon">📜</span>
             <strong>Kapitel ${gameState.chapter} / 8</strong>
-            <span>${gameState.completedChapters.size} abgeschlossen</span>
-          </div>
-          <div class="pause-tile">
-            <span class="tile-icon">🔍</span>
-            <strong>${gameState.discoveredRelics.size} / ${REFORMATION_RELICS.length} Quellen</strong>
-            <span>geborgen & geprüft</span>
+            <span>${gameState.completedChapters.size} gemeistert</span>
           </div>
           <div class="pause-tile">
             <span class="tile-icon">📖</span>
-            <strong>${gameState.lexiconRead.size} / ${REFORMATION_LEXICON.length} Begriffe</strong>
-            <span>im Lexikon studiert</span>
+            <strong>${gameState.unlockedLexicon.size} / ${REFORMATION_LEXICON.length} Lexikon</strong>
+            <span>${gameState.discoveredRelics.size} / ${REFORMATION_RELICS.length} Quellen geborgen</span>
           </div>
           <div class="pause-tile">
-            <span class="tile-icon">🧭</span>
-            <strong>${Math.round(gameState.walkedDistanceMeters)} Meter</strong>
-            <span>durchs Reich gereist</span>
+            <span class="tile-icon">⏱️</span>
+            <strong>${mm}:${ss} Min · ${Math.round(gameState.walkedDistanceMeters)} m</strong>
+            <span>Aktive Studienzeit &amp; Reiseweg</span>
           </div>
-          <div class="pause-tile" id="tile-print-hefter" style="cursor: pointer; background: #fef3c7;">
+          <div class="pause-tile">
+            <span class="tile-icon">🔑</span>
+            <strong>Hefter-Code</strong>
+            <span class="hefter-code-pill">${hefterCode}</span>
+            <button id="btn-copy-code" class="btn-sub" style="margin-top:4px; font-size:10.5px; padding:2px 8px;">Kopieren</button>
+          </div>
+          <div class="pause-tile" id="tile-print-hefter" style="cursor:pointer; background:#fef3c7;">
             <span class="tile-icon">🖨️</span>
             <strong>A4-Hefterblatt</strong>
-            <span style="color:#b45309; font-weight:700;">Jetzt drucken [U]</span>
+            <span style="color:#b45309; font-weight:700;">1-Klick Druck [U]</span>
           </div>
-          <div class="pause-tile" id="tile-audio-setting" style="cursor: pointer;">
-            <span class="tile-icon">${sound.isMuted() ? '🔇' : sound.getTheme() === 'lute' ? '🪕' : '🎵'}</span>
-            <strong>Klangkulisse</strong>
-            <span>${sound.isMuted() ? 'Stumm geschaltet' : sound.getTheme() === 'lute' ? 'Renaissance-Laute' : 'Sakral-Orgel (Choral)'}</span>
+          <div class="pause-tile">
+            <span class="tile-icon" id="pause-audio-icon" style="cursor:pointer;">${sound.isMuted() ? '🔇' : '🎵'}</span>
+            <strong>Audio (${sound.isMuted() ? 'Aus' : volPct + '%'})</strong>
+            <input id="pause-volume-slider" type="range" min="0" max="100" value="${volPct}" style="width:100%; accent-color:#b45309;" />
+            <button id="btn-pause-mute" class="btn-sub" style="font-size:10.5px; padding:2px 8px;">${sound.isMuted() ? 'Ton ein' : 'Stumm'}</button>
           </div>
         </div>
 
         <div class="pause-footer-actions">
-          <button id="btn-save-state" class="btn-sub">💾 Spielstand sichern</button>
+          <button id="btn-pause-startscreen" class="btn-sub">🏠 Startscreen [K]</button>
+          <button id="btn-save-state" class="btn-sub">💾 Sichern</button>
           <button id="btn-resume" class="btn-primary">Weiterspielen ➔</button>
         </div>
       </div>
@@ -1528,24 +1561,24 @@ export class UIScene extends Phaser.Scene {
 
     document.getElementById('btn-pause-close')?.addEventListener('click', () => this.closeModal());
     document.getElementById('btn-resume')?.addEventListener('click', () => this.closeModal());
-    document.getElementById('tile-print-hefter')?.addEventListener('click', () => {
-      this.printSheet.print();
+    document.getElementById('btn-pause-startscreen')?.addEventListener('click', () => this.openStartScreen());
+    document.getElementById('tile-print-hefter')?.addEventListener('click', () => this.triggerDiplomPrint());
+    document.getElementById('btn-copy-code')?.addEventListener('click', () => {
+      navigator.clipboard?.writeText(hefterCode).catch(() => {});
+      this.showToast(`📋 Code kopiert: ${hefterCode}`);
     });
-    document.getElementById('tile-audio-setting')?.addEventListener('click', () => {
-      if (sound.isMuted()) {
-        sound.toggleMute();
-        sound.setTheme('choral');
-      } else if (sound.getTheme() === 'choral') {
-        sound.setTheme('lute');
-      } else {
-        sound.toggleMute();
-      }
+    document.getElementById('btn-pause-mute')?.addEventListener('click', () => {
+      sound.toggleMute();
       this.openPauseDashboard();
+    });
+    document.getElementById('pause-volume-slider')?.addEventListener('input', (e) => {
+      const v = parseInt((e.target as HTMLInputElement).value || '42', 10) / 100;
+      sound.setVolume(v);
     });
     document.getElementById('btn-save-state')?.addEventListener('click', () => {
       gameState.autoSave();
       sound.success();
-      this.showToast('Spielstand im Browser gespeichert!');
+      this.showToast('💾 Spielstand im Browser gesichert!');
     });
   }
 
@@ -1559,7 +1592,7 @@ export class UIScene extends Phaser.Scene {
 
     setTimeout(() => {
       toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 400);
+      setTimeout(() => toast.remove(), 350);
     }, 2800);
   }
 }

@@ -104,24 +104,29 @@ export class LivingWorldManager {
     });
   }
 
-  // 4. WATER EFFECTS
-  public initWaterEffects(riverMinX: number, riverMaxX: number, minY: number, maxY: number): void {
-    const count = 12;
+  // 4. WATER EFFECTS (exakte Elb-Kurve 50 + sin(ty * 0.08) * 3.5)
+  public initWaterEffects(_riverMinX: number, _riverMaxX: number, minY: number, maxY: number): void {
+    const count = 16;
     for (let i = 0; i < count; i++) {
-      const rx = Phaser.Math.Between(riverMinX, riverMaxX);
-      const ry = Phaser.Math.Between(minY, maxY);
-      const w = Phaser.Math.Between(14, 28);
+      let ry = Phaser.Math.Between(minY, maxY);
+      const ty = ry / 16;
+      if ((ty >= 21 && ty <= 26) || (ty >= 55 && ty <= 60)) {
+        ry += 96;
+      }
+      const cxPx = (50 + Math.sin((ry / 16) * 0.08) * 3.5) * 16;
+      const rx = Phaser.Math.Between(Math.round(cxPx - 12), Math.round(cxPx + 12));
+      const w = Phaser.Math.Between(12, 22);
       const ripple = this.scene.add
-        .rectangle(rx, ry, w, 2, 0xd8f0ff, 0.45)
+        .rectangle(rx, ry, w, 2, 0xd8f0ff, 0.42)
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(ry);
+        .setDepth(4);
 
       this.scene.tweens.add({
         targets: ripple,
-        alpha: { from: 0.1, to: 0.6 },
-        scaleX: { from: 0.8, to: 1.2 },
-        x: `+=${Phaser.Math.Between(-3, 3)}`,
-        y: `+=${Phaser.Math.Between(6, 12)}`,
+        alpha: { from: 0.12, to: 0.55 },
+        scaleX: { from: 0.85, to: 1.15 },
+        x: `+=${Phaser.Math.Between(-2, 2)}`,
+        y: `+=${Phaser.Math.Between(4, 9)}`,
         duration: 1800 + Math.random() * 1200,
         yoyo: true,
         repeat: -1,
@@ -142,17 +147,10 @@ export class LivingWorldManager {
     });
   }
 
-  // 6. NPC & MENTOR BREATHING ANIMATION (Steinzeit Benchmark)
+  // 6. MENTOREN-ATEMRUHE OHNE PIXEL-DEHNUNG (SKILL.md §1.4: kein scaleY-Morph auf 16x32 Humanoide!)
   public registerMentor(sprite: Phaser.GameObjects.Sprite | null): void {
     if (!sprite) return;
-    this.scene.tweens.add({
-      targets: sprite,
-      scaleY: { from: 0.97, to: 1.03 },
-      duration: 1300 + Math.random() * 400,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    sprite.setScale(1.0);
   }
 
   public update(delta: number): void {

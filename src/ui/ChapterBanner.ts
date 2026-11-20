@@ -69,7 +69,7 @@ export class ChapterBanner {
         top: 60px;
         left: 50%;
         transform: translateX(-50%);
-        z-index: 1000;
+        z-index: 18;
         display: flex;
         flex-direction: column;
         align-items: center;

@@ -171,12 +171,13 @@ export const REFORMATION_RECIPES: ReformationRecipe[] = [
   },
   {
     id: 'recipe_arznei',
-    name: 'Klostersalbe mischen',
-    outputItem: 'heilkräuter',
+    name: 'Klostertrunk brauen',
+    outputItem: 'bier_krug',
     outputCount: 2,
     ingredients: [
-      { item: 'heilkräuter', count: 1 },
+      { item: 'heilkräuter', count: 2 },
+      { item: 'apfel', count: 1 },
     ],
-    description: 'Mörsere Kräuter mit Wachs zu einer lindernden Wundsalbe.',
+    description: 'Braue aus Klosterkräutern und frischen Äpfeln einen stärkenden Heiltrunk.',
   },
 ];

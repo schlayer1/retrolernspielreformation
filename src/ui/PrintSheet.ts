@@ -135,17 +135,15 @@ export class PrintSheet {
           </div>
         </div>
 
-        <!-- 6. Lehrer-Bewertung & Notizen -->
-        <div class="print-footer-grid">
-          <div class="notes-box">
-            <span class="box-label">Didaktische Reflexion des Schülers / der Schülerin:</span>
-            <div class="lines"></div>
-            <div class="lines"></div>
-            <div class="lines"></div>
-          </div>
-          <div class="sign-box">
-            <div class="sign-field">Gesehen (Fachlehrer/in Geschichte):</div>
-            <div class="sign-line">Datum, Unterschrift</div>
+        <!-- 6. Persönliche Chronik-Reflexion (ohne Lehrer-Benotungsfeld gemäß HBS-Standard) -->
+        <div class="print-footer-grid" style="grid-template-columns: 1fr;">
+          <div class="notes-box" style="height: auto; min-height: 68px;">
+            <span class="box-label">Meine wichtigste Erkenntnis &amp; Gewissens-Entscheidung aus der Reformationszeit:</span>
+            ${
+              gameState.dilemmaSummary
+                ? `<div style="font-size: 9pt; margin: 5px 0; color: #111827;">⚖️ <strong>Dokumentierte Entscheidung:</strong> ${gameState.dilemmaSummary}</div>`
+                : `<div class="lines"></div><div class="lines"></div><div class="lines"></div>`
+            }
           </div>
         </div>
       </div>

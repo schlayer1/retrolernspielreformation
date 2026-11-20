@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { sound } from '../audio/sound';
-import { REFORMATION_CHAPTERS, ChapterData } from '../data/chapters';
-import { REFORMATION_ITEMS, ReformationItemId } from '../data/items';
+import { musicManager } from '../audio/MusicManager';
+import { REFORMATION_CHAPTERS } from '../data/chapters';
+import { ReformationItemId } from '../data/items';
 import { REFORMATION_RELICS, ReformationRelic } from '../data/relics';
-import { REFORMATION_DECOR, RESOURCE_NODES, DecorObject, ResourceNode } from '../data/decor';
-import { REFORMATION_STATIONS, DidacticStation } from '../data/stations';
+import { REFORMATION_DECOR, RESOURCE_NODES, ResourceNode } from '../data/decor';
+import { REFORMATION_STATIONS } from '../data/stations';
 import { gameState } from '../systems/GameState';
 import { WildlifeManager } from '../world/Wildlife';
 import { LivingWorldManager } from '../world/LivingWorldManager';
@@ -12,94 +13,6 @@ import { ChapterBanner } from '../ui/ChapterBanner';
 import { CompanionManager } from '../world/Companion';
 import { AtmosphereManager } from '../world/AtmosphereManager';
 import { AmbientSpeechManager } from '../world/AmbientSpeech';
-
-export interface RoomDefinition {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  bgKey: string;
-  entrance: { x: number; y: number };
-  exit: { x: number; y: number };
-  outdoorDoorId: string;
-  outdoorDoor: { x: number; y: number };
-  outdoorWarp: { x: number; y: number };
-}
-
-export const ROOMS: RoomDefinition[] = [
-  {
-    id: 'cranach',
-    name: 'Cranach Hofatelier & Druckerei',
-    x: 118 * 16,
-    y: 12 * 16,
-    w: 384,
-    h: 240,
-    bgKey: 'interior_store_smithy_day',
-    entrance: { x: 125 * 16, y: 24 * 16 },
-    exit: { x: 125 * 16, y: 26 * 16 },
-    outdoorDoorId: 'door_enter_cranach',
-    outdoorDoor: { x: 36 * 16, y: 20 * 16 },
-    outdoorWarp: { x: 36 * 16, y: 22 * 16 },
-  },
-  {
-    id: 'worms',
-    name: 'Kaiserlicher Reichstagssaal zu Worms',
-    x: 156 * 16,
-    y: 12 * 16,
-    w: 416,
-    h: 256,
-    bgKey: 'interior_guild_library_day',
-    entrance: { x: 169 * 16, y: 25 * 16 },
-    exit: { x: 169 * 16, y: 27 * 16 },
-    outdoorDoorId: 'door_enter_worms',
-    outdoorDoor: { x: 80 * 16, y: 20 * 16 },
-    outdoorWarp: { x: 80 * 16, y: 22 * 16 },
-  },
-  {
-    id: 'fugger',
-    name: 'Fuggerpalais Audienzsaal (Augsburg)',
-    x: 117 * 16,
-    y: 47 * 16,
-    w: 416,
-    h: 256,
-    bgKey: 'interior_guild_library_night',
-    entrance: { x: 130 * 16, y: 60 * 16 },
-    exit: { x: 130 * 16, y: 62 * 16 },
-    outdoorDoorId: 'door_enter_fugger',
-    outdoorDoor: { x: 62 * 16, y: 20 * 16 },
-    outdoorWarp: { x: 62 * 16, y: 22 * 16 },
-  },
-  {
-    id: 'wartburg',
-    name: 'Luthers Schreibstube (Wartburg)',
-    x: 158 * 16,
-    y: 47 * 16,
-    w: 384,
-    h: 240,
-    bgKey: 'interior_tavern_night',
-    entrance: { x: 168 * 16, y: 59 * 16 },
-    exit: { x: 168 * 16, y: 61 * 16 },
-    outdoorDoorId: 'door_enter_wartburg',
-    outdoorDoor: { x: 22 * 16, y: 74 * 16 },
-    outdoorWarp: { x: 22 * 16, y: 76 * 16 },
-  },
-  {
-    id: 'kloster',
-    name: 'Refektorium & Kloster-Apotheke',
-    x: 138 * 16,
-    y: 70 * 16,
-    w: 384,
-    h: 240,
-    bgKey: 'interior_tavern_day',
-    entrance: { x: 147 * 16, y: 82 * 16 },
-    exit: { x: 147 * 16, y: 84 * 16 },
-    outdoorDoorId: 'door_enter_kloster',
-    outdoorDoor: { x: 36 * 16, y: 49 * 16 },
-    outdoorWarp: { x: 36 * 16, y: 51 * 16 },
-  },
-];
 
 export interface InteractiveTarget {
   id: string;
@@ -109,23 +22,43 @@ export interface InteractiveTarget {
   x: number;
   y: number;
   minChapter: number;
+  chapterId?: number;
   itemId?: ReformationItemId;
   relic?: ReformationRelic;
   stationId?: string;
-  warpTarget?: { x: number; y: number; isIndoor: boolean; name: string; roomId?: string };
-  questChapter?: number;
-  questObjectiveIndex?: number;
-  questMessage?: string;
+  interiorId?: string;
   actionTip?: string;
   discovered?: boolean;
   nodeDef?: ResourceNode;
+  sprite?: Phaser.GameObjects.Sprite;
 }
 
+const TALL_BUILDING_KEYS = new Set([
+  'chapel',
+  'keep',
+  'gatehouse',
+  'house_tall_slate',
+  'house_tall_tile',
+  'house_gable_tile',
+  'house_gable_slate',
+  'house_gable_plum',
+  'cottage_stone',
+  'cottage_thatch',
+  'cottage_tile',
+  'cottage_moss',
+  'barn',
+  'smithy',
+  'stable',
+  'tower_round',
+]);
+
 export class WorldScene extends Phaser.Scene {
-  public mapW = 196;
-  public mapH = 90;
-  public currentRoom: RoomDefinition | null = null;
-  public player!: Phaser.GameObjects.Sprite;
+  public mapW = 96;
+  public mapH = 88;
+  public player!: Phaser.Physics.Arcade.Sprite;
+  public obstacles!: Phaser.Physics.Arcade.StaticGroup;
+  private blockedBoxes: { x1: number; y1: number; x2: number; y2: number }[] = [];
+
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: {
     W: Phaser.Input.Keyboard.Key;
@@ -135,11 +68,12 @@ export class WorldScene extends Phaser.Scene {
     E: Phaser.Input.Keyboard.Key;
   };
   private spaceKey?: Phaser.Input.Keyboard.Key;
-  private enterKey?: Phaser.Input.Keyboard.Key;
 
   public targets: InteractiveTarget[] = [];
   private activeTarget: InteractiveTarget | null = null;
   private labelDiv: HTMLElement | null = null;
+  private nameplatesLayer: HTMLElement | null = null;
+  private mentorNameplates: { chId: number; name: string; role: string; sprite: Phaser.GameObjects.Sprite; el: HTMLElement }[] = [];
 
   public wildlifeManager!: WildlifeManager;
   public livingWorldManager!: LivingWorldManager;
@@ -151,47 +85,98 @@ export class WorldScene extends Phaser.Scene {
   private stepTimer = 0;
   private facing: 'down' | 'up' | 'left' | 'right' = 'down';
   private lastBannerChapter = -1;
+  private lastPosX = 0;
+  private lastPosY = 0;
 
   constructor() {
     super('WorldScene');
   }
 
+  public riverCenterTileX(ty: number): number {
+    return 50 + Math.sin(ty * 0.08) * 3.5;
+  }
+
+  private isBridgeRow(ty: number): boolean {
+    return (ty >= 21 && ty <= 26) || (ty >= 55 && ty <= 60);
+  }
+
+  private addStaticBox(cx: number, cy: number, w: number, h: number): void {
+    const zone = this.add.zone(cx, cy, w, h);
+    this.physics.add.existing(zone, true);
+    const body = zone.body as Phaser.Physics.Arcade.StaticBody;
+    body.setSize(w, h);
+    this.obstacles.add(zone);
+    this.blockedBoxes.push({
+      x1: cx - w * 0.5,
+      y1: cy - h * 0.5,
+      x2: cx + w * 0.5,
+      y2: cy + h * 0.5,
+    });
+  }
+
+  public isWorldPointBlocked(x: number, y: number): boolean {
+    if (x < 24 || x > (this.mapW - 1.5) * 16 || y < 24 || y > (this.mapH - 1.5) * 16) {
+      return true;
+    }
+    const ty = y / 16;
+    const tx = x / 16;
+    if (!this.isBridgeRow(ty) && Math.abs(tx - this.riverCenterTileX(ty)) < 2.2) {
+      return true;
+    }
+    for (const b of this.blockedBoxes) {
+      if (x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2) return true;
+    }
+    return false;
+  }
+
   create(): void {
-    // 1. Bake Per-Pixel Multi-Biome Ground with 4x4 Bayer Dithering & Sandstone Cobblestones
+    const worldPxW = this.mapW * 16;
+    const worldPxH = this.mapH * 16;
+
+    this.physics.world.setBounds(16, 16, worldPxW - 32, worldPxH - 32);
+    this.obstacles = this.physics.add.staticGroup();
+    this.blockedBoxes = [];
+
+    // 1. Bake Multi-Biome Ground with 4x4 Bayer Dithering & Smooth Overworld Water
     this.bakeReformationTerrainTexture();
     this.add.image(0, 0, 'reformation_baked_ground').setOrigin(0, 0).setDepth(0);
 
-    // 2. Render Authentic 16-Bit Pre-Rendered Room Backdrops in Isolated Coordinate Zones
-    for (const room of ROOMS) {
-      if (this.textures.exists(room.bgKey)) {
-        this.add.image(room.x, room.y, room.bgKey).setOrigin(0, 0).setDepth(2);
-      }
+    // 2. River Bridges (Real world_atlas 'bridge_h' spans over the two Elbe crossings)
+    this.placeElbeBridges();
+
+    // 3. River Physics Colliders (blocks walking into Elbe except across the two bridges)
+    for (let ty = 1; ty < this.mapH - 1; ty++) {
+      if (this.isBridgeRow(ty)) continue;
+      const cxPx = this.riverCenterTileX(ty) * 16;
+      this.addStaticBox(cxPx, ty * 16 + 8, 44, 16);
     }
 
-    // 3. Initialize Subsystems
+    // 4. Initialize Subsystems
     this.wildlifeManager = new WildlifeManager(this);
     this.wildlifeManager.init();
     this.livingWorldManager = new LivingWorldManager(this);
-    this.livingWorldManager.initWaterEffects(48 * 16, 52 * 16, 12 * 16, 84 * 16);
-    this.livingWorldManager.registerFireSource(36 * 16, 17 * 16, true);
-    this.livingWorldManager.registerFireSource(56 * 16, 71 * 16, true);
-    this.livingWorldManager.registerFireSource(22 * 16, 69 * 16, true);
+    this.livingWorldManager.initWaterEffects(46 * 16, 54 * 16, 10 * 16, 84 * 16);
+    this.livingWorldManager.registerFireSource(35 * 16, 17 * 16, true, 24, 0xffa533);
+    this.livingWorldManager.registerFireSource(58 * 16, 71 * 16, true, 24, 0xff8833);
+    this.livingWorldManager.registerFireSource(22 * 16, 69 * 16, true, 28, 0xff7722);
+    this.livingWorldManager.registerFireSource(26 * 16, 34 * 16, false, 18, 0xffaa44);
+
     this.chapterBanner = new ChapterBanner();
     this.companionManager = new CompanionManager(this);
     this.atmosphereManager = new AtmosphereManager(this);
     this.atmosphereManager.init(this.mapW, this.mapH);
     this.atmosphereManager.setChapterMood(gameState.chapter);
     this.ambientSpeechManager = new AmbientSpeechManager(this);
+    this.ambientSpeechManager.spawnCitizens(this);
 
-    // 4. Dense Ground Flora Scattering (Outdoors only) & Secret of Mana Nature
+    // 5. Flora, Trees, Aquatic Bank Details & Wartburg 3D Plateau Cliffs
     this.scatterGroundFlora();
     this.placeOverworldTreesAndNature();
+    this.placeRiverBankProps();
     this.buildPlateauCliffs();
 
-    // 5. Place Static Decor & Real Architecture Buildings
+    // 6. Place Decor, Buildings & Resource Hotspots (with real Arcade Physics colliders)
     this.placeWorldDecor();
-
-    // 6. Place Resource Hotspots
     this.placeResourceNodes();
 
     // 7. Setup Controls
@@ -205,93 +190,113 @@ export class WorldScene extends Phaser.Scene {
         E: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
       };
       this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-      this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     }
 
-    // 8. Spawn Player
+    // 8. Spawn Arcade Physics Player (strictly clamped to 96x88 world)
+    const chData = gameState.getChapterData();
+    const spawnX = Phaser.Math.Clamp(gameState.playerX || chData.spawn.x, 32, worldPxW - 32);
+    const spawnY = Phaser.Math.Clamp(gameState.playerY || chData.spawn.y, 32, worldPxH - 32);
+    gameState.playerX = spawnX;
+    gameState.playerY = spawnY;
+    this.lastPosX = spawnX;
+    this.lastPosY = spawnY;
+
     const texKey = gameState.gender === 'female' && this.textures.exists('character_female') ? 'character_female' : 'character';
-    this.player = this.add.sprite(gameState.playerX, gameState.playerY, texKey, 0);
+    this.player = this.physics.add.sprite(spawnX, spawnY, texKey, 0);
     this.player.setOrigin(0.5, 0.85);
     this.player.setScale(1.0);
     this.player.setDepth(this.player.y);
+    this.player.setCollideWorldBounds(true);
+
+    const pBody = this.player.body as Phaser.Physics.Arcade.Body;
+    pBody.setSize(10, 8);
+    pBody.setOffset(3, 21);
+
+    this.physics.add.collider(this.player, this.obstacles);
+
     if (this.anims.exists(`idle-${gameState.gender}-down`)) {
       this.player.play(`idle-${gameState.gender}-down`, true);
     }
 
-    // 9. Setup Camera Clamping & Room State
-    const startRoom = ROOMS.find(
-      (r) =>
-        this.player.x >= r.x &&
-        this.player.x <= r.x + r.w &&
-        this.player.y >= r.y &&
-        this.player.y <= r.y + r.h
-    );
-
-    if (startRoom) {
-      this.currentRoom = startRoom;
-      const cam = this.cameras.main;
-      cam.stopFollow();
-      const fitZoom = Math.max(cam.width / startRoom.w, cam.height / startRoom.h);
-      cam.setZoom(fitZoom);
-      cam.centerOn(startRoom.x + startRoom.w / 2, startRoom.y + startRoom.h / 2);
-      cam.setBounds(startRoom.x, startRoom.y, startRoom.w, startRoom.h);
-      sound.setIndoorAcoustics(true);
-    } else {
-      this.currentRoom = null;
-      this.cameras.main.setBounds(0, 0, 96 * 16, 88 * 16);
-      this.cameras.main.setZoom(1.0);
-      this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-      sound.setIndoorAcoustics(false);
-    }
+    // 9. Camera Clamping (Unified 96x88 Overworld)
+    this.cameras.main.setBounds(0, 0, worldPxW, worldPxH);
+    this.cameras.main.setZoom(1.0);
+    this.cameras.main.startFollow(this.player, true, 0.14, 0.14);
+    sound.setIndoorAcoustics(false);
 
     // 10. Companion Unlock (Luthers Hund Tölpel)
-    this.companionManager.unlock(this.player.x - 20, this.player.y);
+    this.companionManager.unlock(this.player.x - 22, this.player.y);
 
     // 11. Setup Interactive Targets, Doors & Mentors
     this.setupTargets();
-
-    (window as any).__enterSampleInterior = () => this.enterInterior('lutherstube_wittenberg');
     this.initInteractionLabel();
+    this.initMentorNameplates();
 
-    // Expose interaction trigger globally for DOM label click & UI scene
+    // 12. Scene Resume Handling (clean input & HUD recovery after returning from InteriorScene)
+    this.events.on('resume', () => {
+      if (this.player?.body) {
+        (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+      }
+      this.input.keyboard?.resetKeys();
+      sound.setIndoorAcoustics(false);
+      this.refreshCharacterAppearance();
+      this.updateQuestCompass();
+      musicManager.playChapterTrack(gameState.chapter);
+    });
+
+    // Global Hooks for UI, Tests & Interior Verification
     (window as any).__triggerInteraction = () => this.triggerInteraction();
+    (window as any).__enterSampleInterior = () => this.enterInterior('lutherstube_wittenberg');
+    (window as any).__teleportToChapter = (ch: number) => this.teleportToChapter(ch);
+    (window as any).__refreshCharacterAppearance = () => this.refreshCharacterAppearance();
+    (window as any).__WORLD__ = this;
 
-    // 12. Dynamic Fireplaces, Chimney Smoke & Interior Ambient Animation
-    this.livingWorldManager.registerFireSource(136 * 16, 17 * 16, true, 28, 0xffa533); // Cranach Esse
-    this.livingWorldManager.registerFireSource(163 * 16, 50 * 16, true, 32, 0xff7722); // Wartburg Kamin
-    this.livingWorldManager.registerFireSource(26 * 16, 34 * 16, false, 20, 0xffaa44);  // Tetzel Stand
-    this.livingWorldManager.registerFireSource(143 * 16, 73 * 16, true, 28, 0xff7722); // Kloster Kamin
-
-    if (this.textures.exists('dog_sleeping')) {
-      this.add.sprite(163 * 16, 52 * 16, 'dog_sleeping').play('dog-sleeping-anim').setDepth(52 * 16 + 1); // Wartburg
-    }
-    if (this.textures.exists('candle_lit')) {
-      this.add.sprite(126 * 16, 16 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(16 * 16 + 2); // Cranach
-      this.add.sprite(169 * 16, 20 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(20 * 16 + 2); // Worms
-      this.add.sprite(137 * 16, 51 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(51 * 16 + 2); // Fugger
-      this.add.sprite(168 * 16, 52 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(52 * 16 + 2); // Wartburg
-      this.add.sprite(147 * 16, 75 * 16 - 12, 'candle_lit').play('candle-lit-anim').setDepth(75 * 16 + 2); // Kloster
-    }
-    if (this.textures.exists('coin_sparkle')) {
-      this.add.sprite(137 * 16 + 8, 51 * 16 - 8, 'coin_sparkle').play('coin-sparkle-anim').setDepth(51 * 16 + 3); // Fugger
-    }
-    if (this.textures.exists('cauldron')) {
-      this.add.sprite(143 * 16 + 4, 73 * 16 - 4, 'cauldron').play('cauldron-anim').setDepth(73 * 16 + 2); // Kloster
-    }
-
-    // 14. First Chapter Banner
+    // 13. Initial Banner & Start Music if Game Active (otherwise StartScreen starts music on launch)
     this.lastBannerChapter = gameState.chapter;
-    const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter);
-    if (curCh) {
-      this.chapterBanner.show({
-        chapterNumber: curCh.number,
-        title: curCh.title,
-        subtitle: `${curCh.year} · ${curCh.location}`,
-      });
+    if (!(window as any).__isModalOpen?.()) {
+      this.showChapterBanner(chData);
+      musicManager.playChapterTrack(gameState.chapter);
+    } else {
+      musicManager.playStartTheme();
+    }
+  }
+
+  private showChapterBanner(curCh = gameState.getChapterData()): void {
+    this.chapterBanner.show({
+      chapterNumber: curCh.number,
+      title: curCh.title,
+      subtitle: `${curCh.year} · ${curCh.location}`,
+    });
+  }
+
+  public teleportToChapter(chNum: number): void {
+    const ch = Math.max(1, Math.min(8, chNum));
+    gameState.setChapter(ch);
+    const curCh = gameState.getChapterData(ch);
+    if (!this.player) return;
+
+    const tx = Phaser.Math.Clamp(curCh.spawn.x, 32, this.mapW * 16 - 32);
+    const ty = Phaser.Math.Clamp(curCh.spawn.y, 32, this.mapH * 16 - 32);
+    this.player.setPosition(tx, ty);
+    (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    this.player.setDepth(ty);
+    gameState.playerX = tx;
+    gameState.playerY = ty;
+    this.lastPosX = tx;
+    this.lastPosY = ty;
+
+    if (this.companionManager?.sprite) {
+      this.companionManager.sprite.setPosition(tx - 20, ty + 2);
+      this.companionManager.sprite.setDepth(ty + 2);
     }
 
-    // 15. Start BGM
-    sound.startBGM(gameState.chapter);
+    this.ambientSpeechManager?.dismissBubble(true);
+    this.cameras.main.centerOn(tx, ty);
+    this.lastBannerChapter = ch;
+    this.showChapterBanner(curCh);
+    this.atmosphereManager.setChapterMood(ch);
+    musicManager.playChapterTrack(ch);
+    this.updateQuestCompass();
   }
 
   private bakeReformationTerrainTexture(): void {
@@ -304,7 +309,6 @@ export class WorldScene extends Phaser.Scene {
     const imgData = ctx.createImageData(W, H);
     const dst = imgData.data;
 
-    // 1. Source Image Data from ground_a2 (Authentic SNES medieval autotile sheet)
     const groundKey = this.textures.exists('ground_a2') ? 'ground_a2' : 'ground_med_a2';
     const srcTex = this.textures.get(groundKey).getSourceImage() as HTMLImageElement;
     const srcCanvas = document.createElement('canvas');
@@ -315,7 +319,7 @@ export class WorldScene extends Phaser.Scene {
     const srcData = sctx.getImageData(0, 0, srcTex.width, srcTex.height).data;
     const sw = srcTex.width;
 
-    // 2. Source Image Data from Overworld (Classic 16-Bit SNES Water tile at 48,48)
+    // Overworld clean water tile at (48, 112) — zero ripple rings
     const owTex = this.textures.get('Overworld').getSourceImage() as HTMLImageElement;
     const owCanvas = document.createElement('canvas');
     owCanvas.width = owTex.width;
@@ -325,7 +329,6 @@ export class WorldScene extends Phaser.Scene {
     const owData = owctx.getImageData(0, 0, owTex.width, owTex.height).data;
     const oww = owTex.width;
 
-    // Seamless tile sampling: 48x48 natural pattern sampling without bolt-slab distortions
     const sampleBlock = (bx: number, by: number, x: number, y: number): [number, number, number] => {
       const u = ((x % 48) + 48) % 48;
       const v = ((y % 48) + 48) % 48;
@@ -339,9 +342,15 @@ export class WorldScene extends Phaser.Scene {
       const u = ((x % 16) + 16) % 16;
       const v = ((y % 16) + 16) % 16;
       const sx = 48 + u;
-      const sy = 48 + v;
+      const sy = 112 + v;
       const idx = (sy * oww + sx) * 4;
-      return [owData[idx], owData[idx + 1], owData[idx + 2]];
+      // Gentle flow shimmer
+      const shimmer = Math.sin(x * 0.14 + y * 0.18) > 0.85 ? 10 : 0;
+      return [
+        Math.min(255, owData[idx] + shimmer),
+        Math.min(255, owData[idx + 1] + shimmer),
+        Math.min(255, owData[idx + 2] + shimmer),
+      ];
     };
 
     const bayer4x4 = [
@@ -355,107 +364,88 @@ export class WorldScene extends Phaser.Scene {
       for (let x = 0; x < W; x += 2) {
         const tx = x / 16;
         const ty = y / 16;
-
-        // Solid dark void for all x >= 96 (interior rooms are rendered via pre-rendered backdrops)
-        if (tx >= 96) {
-          for (let py = y; py < y + 2 && py < H; py++) {
-            for (let px = x; px < x + 2 && px < W; px++) {
-              const oi = (py * W + px) * 4;
-              dst[oi] = 12;
-              dst[oi + 1] = 11;
-              dst[oi + 2] = 16;
-              dst[oi + 3] = 255;
-            }
-          }
-          continue;
-        }
-
         const dither = bayer4x4[Math.floor(y / 2) % 4][Math.floor(x / 2) % 4] - 0.5;
 
-        // River Elbe curve: tx around 50 + sin wave
-        const riverCenter = 50 + Math.sin(ty * 0.08) * 3.5;
+        const riverCenter = this.riverCenterTileX(ty);
         const distRiver = Math.abs(tx - riverCenter);
-
-        // Bridges: Marktbrücke at y: 22..25, Südsteg at y: 56..59
         const isBridge = distRiver < 2.8 && ((ty >= 22 && ty <= 25) || (ty >= 56 && ty <= 59));
+
+        // Wartburg Plateau Cliff Rim along ty = 62.5..64.4 (tx = 0..45) with two passable stair passes
+        const isWartburgCliffZone = tx < 45 && ty >= 62.5 && ty <= 64.4;
+        const isCliffStair =
+          isWartburgCliffZone && ((tx >= 14 && tx <= 16.8) || (tx >= 32 && tx <= 34.8));
 
         // Medieval Roads & Footpaths
         const dWittenbergToRiver = this.distToSegment(tx, ty, 24, 24, 50, 24);
         const dRiverToWorms = this.distToSegment(tx, ty, 50, 24, 80, 22);
         const dFuggerPath = this.distToSegment(tx, ty, 50, 24, 62, 22);
-        const dSouthRoad = this.distToSegment(tx, ty, 24, 24, 22, 74);
-        const dPeasantRoad = this.distToSegment(tx, ty, 22, 74, 56, 74);
-        const dAugsburg1555 = this.distToSegment(tx, ty, 56, 74, 80, 74);
+        const dSouthRoadWest = this.distToSegment(tx, ty, 24, 24, 15.4, 63.5);
+        const dSouthRoadCourtyard = this.distToSegment(tx, ty, 15.4, 63.5, 24, 77);
+        const dKlosterEastPass = this.distToSegment(tx, ty, 36, 50, 33.4, 71);
+        const dPeasantRoad = this.distToSegment(tx, ty, 24, 76, 59, 75);
+        const dEastSouthBridge = this.distToSegment(tx, ty, 36, 54, 59, 58);
+        const dSouthEastRoad = this.distToSegment(tx, ty, 53, 58, 59, 75);
+        const dAugsburg1555 = this.distToSegment(tx, ty, 59, 75, 81, 76);
         const dKlosterPath = this.distToSegment(tx, ty, 24, 24, 36, 50);
+
         const minRoadDist = Math.min(
           dWittenbergToRiver,
           dRiverToWorms,
           dFuggerPath,
-          dSouthRoad,
+          dSouthRoadWest,
+          dSouthRoadCourtyard,
+          dKlosterEastPass,
           dPeasantRoad,
+          dEastSouthBridge,
+          dSouthEastRoad,
           dAugsburg1555,
           dKlosterPath
         );
 
-        // Organic medieval plazas with soft dithered boundaries
-        const distWittenberg = Math.hypot((tx - 26) * 0.85, (ty - 22) * 1.0);
-        const inWittenbergPlaza = distWittenberg < 8.5 + dither * 1.2;
-
-        const distCranach = Math.hypot((tx - 38) * 0.9, (ty - 21) * 1.0);
-        const inCranachCourt = distCranach < 5.5 + dither * 1.0;
-
-        const distFugger = Math.hypot((tx - 62) * 0.9, (ty - 21) * 1.0);
-        const inFuggerCourt = distFugger < 5.8 + dither * 1.0;
-
-        const distWorms = Math.hypot((tx - 80) * 0.85, (ty - 21) * 1.0);
-        const inWormsCourt = distWorms < 7.5 + dither * 1.2;
-
-        const distWartburg = Math.hypot((tx - 22) * 0.85, (ty - 73) * 1.0);
-        const inWartburgCourt = distWartburg < 7.0 + dither * 1.2;
-
-        const distAugsburg1555 = Math.hypot((tx - 80) * 0.85, (ty - 75) * 1.0);
-        const inAugsburg1555Court = distAugsburg1555 < 6.5 + dither * 1.0;
-
-        // Sandstone cobblestones for civic plazas (bx: 3, by: 3 in ground_a2)
-        const isSandstoneCobble =
-          inWittenbergPlaza ||
-          inCranachCourt ||
-          inFuggerCourt ||
-          inAugsburg1555Court;
-
-        // Dark castle stone for fortresses (bx: 2, by: 3 in ground_a2)
-        const isCastleStone = inWormsCourt || inWartburgCourt;
+        const inWittenbergPlaza = Math.hypot((tx - 25) * 0.85, (ty - 23) * 1.0) < 9.0 + dither * 1.1;
+        const inCranachCourt = Math.hypot((tx - 37) * 0.9, (ty - 21) * 1.0) < 5.5 + dither * 1.0;
+        const inFuggerCourt = Math.hypot((tx - 62) * 0.9, (ty - 21) * 1.0) < 5.8 + dither * 1.0;
+        const inWormsCourt = Math.hypot((tx - 80) * 0.85, (ty - 21) * 1.0) < 7.5 + dither * 1.1;
+        const inWartburgCourt = Math.hypot((tx - 24) * 0.85, (ty - 76) * 1.0) < 7.5 + dither * 1.1;
+        const inAugsburg1555Court = Math.hypot((tx - 81) * 0.85, (ty - 75) * 1.0) < 6.8 + dither * 1.0;
 
         let bx = 1;
         let by = 1;
         let isWater = false;
         let isBridgePlank = false;
+        let cliffPixelType: 'none' | 'ledge' | 'stair' = 'none';
 
         if (isBridge) {
           isBridgePlank = true;
-        } else if (distRiver < 1.8) {
+        } else if (distRiver < 1.85) {
           isWater = true;
-        } else if (distRiver < 2.8 + dither * 0.6) {
-          bx = 2; // Sandbank
-          by = 1;
-        } else if (isCastleStone) {
-          bx = 6; // Dunkler Burg-Pflasterstein
-          by = 1;
-        } else if (isSandstoneCobble) {
-          bx = 6; // Historischer Pflasterstein / Stadtplatz
-          by = 1;
-        } else if (minRoadDist < 1.4 + dither * 0.4) {
-          bx = 1; // Warmer Feldweg
-          by = 0;
+        } else if (isCliffStair) {
+          cliffPixelType = 'stair';
+        } else if (isWartburgCliffZone) {
+          cliffPixelType = 'ledge';
+        } else if (distRiver < 2.85 + dither * 0.6) {
+          bx = 2;
+          by = 1; // Sand bank
+        } else if (inWormsCourt || inWartburgCourt) {
+          bx = 2;
+          by = 3; // Basalt castle stone
+        } else if (inFuggerCourt || inAugsburg1555Court) {
+          bx = 3;
+          by = 3; // Travertine imperial flagstones
+        } else if (inWittenbergPlaza || inCranachCourt) {
+          bx = 6;
+          by = 1; // Sandstone cobble
+        } else if (minRoadDist < 1.45 + dither * 0.4) {
+          bx = 1;
+          by = 0; // Warm dirt road
         } else {
-          // Thüringer Wald & sächsische Auen mit natürlicher Dither-Variation
           const wave = Math.sin(x * 0.02 + y * 0.02) * 0.5 + Math.cos(x * 0.015 - y * 0.02) * 0.5;
-          if (wave + dither * 0.5 > 0.3) {
-            bx = 0; // Waldgras
-            by = 1;
+          if (wave + dither * 0.5 > 0.32) {
+            bx = 0;
+            by = 1; // Forest green
           } else {
-            bx = 1; // Sommerwiese
-            by = 1;
+            bx = 1;
+            by = 1; // Summer meadow
           }
         }
 
@@ -463,12 +453,24 @@ export class WorldScene extends Phaser.Scene {
           for (let px = x; px < x + 2 && px < W; px++) {
             let r: number, g: number, b: number;
             if (isBridgePlank) {
-              const plankPattern = (px + (py % 4 === 0 ? 1 : 0)) % 6 === 0 ? 112 : 144;
-              r = plankPattern;
-              g = Math.round(plankPattern * 0.72);
-              b = Math.round(plankPattern * 0.44);
+              const plank = (px + (py % 4 === 0 ? 1 : 0)) % 6 === 0 ? 116 : 148;
+              r = plank;
+              g = Math.round(plank * 0.72);
+              b = Math.round(plank * 0.44);
             } else if (isWater) {
               [r, g, b] = sampleWater(px, py);
+            } else if (cliffPixelType === 'stair') {
+              const stepRow = Math.floor(py / 6) % 2;
+              const edge = py % 6 === 0;
+              r = edge ? 118 : stepRow ? 176 : 158;
+              g = edge ? 108 : stepRow ? 162 : 144;
+              b = edge ? 96 : stepRow ? 140 : 124;
+            } else if (cliffPixelType === 'ledge') {
+              const isShadow = py / 16 > 63.3;
+              const seam = (px + py * 3) % 11 === 0;
+              r = isShadow ? (seam ? 58 : 74) : seam ? 92 : 108;
+              g = isShadow ? (seam ? 55 : 70) : seam ? 88 : 104;
+              b = isShadow ? (seam ? 60 : 76) : seam ? 84 : 98;
             } else {
               [r, g, b] = sampleBlock(bx, by, px, py);
             }
@@ -487,6 +489,41 @@ export class WorldScene extends Phaser.Scene {
     canvasTex.refresh();
   }
 
+  private placeElbeBridges(): void {
+    const atlas = this.textures.get('world_atlas');
+    if (!atlas?.has('bridge_h')) return;
+
+    for (const ty of [23.5, 57.5]) {
+      const cx = this.riverCenterTileX(ty) * 16;
+      const y = ty * 16;
+      this.add.image(cx, y, 'world_atlas', 'bridge_h').setOrigin(0.5, 0.5).setScale(1.15, 1.15).setDepth(8);
+    }
+  }
+
+  private placeRiverBankProps(): void {
+    const bankDecor: { ty: number; side: number; key: string; scale: number }[] = [
+      { ty: 14, side: -2.4, key: 'reeds', scale: 0.9 },
+      { ty: 15, side: 2.4, key: 'reeds_2', scale: 0.9 },
+      { ty: 17, side: -0.7, key: 'lilypad_flower', scale: 0.9 },
+      { ty: 29, side: 2.3, key: 'reeds', scale: 0.9 },
+      { ty: 31, side: -2.3, key: 'reeds_2', scale: 0.9 },
+      { ty: 35, side: 0.4, key: 'lilypad', scale: 0.9 },
+      { ty: 44, side: -2.4, key: 'reeds', scale: 0.9 },
+      { ty: 47, side: 0.5, key: 'lilypad_flower', scale: 0.9 },
+      { ty: 51, side: 2.4, key: 'reeds_2', scale: 0.9 },
+      { ty: 65, side: -2.4, key: 'reeds', scale: 0.9 },
+      { ty: 68, side: -0.5, key: 'lilypad', scale: 0.9 },
+      { ty: 72, side: 2.4, key: 'reeds_2', scale: 0.9 },
+    ];
+    for (const bd of bankDecor) {
+      if (!this.textures.exists(bd.key)) continue;
+      const x = (this.riverCenterTileX(bd.ty) + bd.side) * 16;
+      const y = bd.ty * 16;
+      const spr = this.add.image(x, y, bd.key).setOrigin(0.5, 0.85).setScale(bd.scale).setDepth(6);
+      this.livingWorldManager.registerFlora(spr);
+    }
+  }
+
   private distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
     const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
     if (l2 === 0) return Math.hypot(px - x1, py - y1);
@@ -497,80 +534,49 @@ export class WorldScene extends Phaser.Scene {
 
   public scatterGroundFlora(): void {
     const getFloraScale = (f: string): number => {
-      // 16-Bit SNES Proportions: Ground flora must reach player ankle/shin height (10-16px), never dwarf characters
-      if (f.startsWith('flower_bunch')) return 0.38;
-      if (f.startsWith('flower_')) return 0.32;
-      if (f.startsWith('grass_s')) return 0.45;
-      if (f.startsWith('grass_')) return 0.35;
-      if (f.startsWith('fern_big')) return 0.40;
-      if (f.startsWith('fern_')) return 0.35;
-      if (f.startsWith('mushroom_')) return 0.38;
-      if (f.startsWith('pebbles')) return 0.55;
-      return 0.35;
+      if (f.startsWith('flower_bunch')) return 0.36;
+      if (f.startsWith('flower_')) return 0.30;
+      if (f.startsWith('grass_s')) return 0.42;
+      if (f.startsWith('grass_')) return 0.34;
+      if (f.startsWith('fern_big')) return 0.38;
+      if (f.startsWith('fern_')) return 0.32;
+      if (f.startsWith('mushroom_')) return 0.35;
+      if (f.startsWith('pebbles')) return 0.50;
+      return 0.34;
     };
 
     const floraFrames = [
-      'flower_red_a',
-      'flower_red_b',
-      'flower_blue_a',
-      'flower_blue_b',
-      'flower_purple',
-      'flower_sun',
-      'flower_white',
-      'flower_tulip_y',
-      'flower_pink',
-      'flower_bunch_a',
-      'flower_bunch_b',
-      'flower_bunch_c',
-      'mushroom_red',
-      'mushroom_b',
-      'mushroom_small',
-      'grass_1',
-      'grass_2',
-      'grass_3',
-      'grass_4',
-      'grass_s1',
-      'grass_s2',
-      'grass_s3',
-      'grass_s4',
-      'fern_1',
-      'fern_2',
-      'fern_3',
-      'fern_4',
-      'fern_big',
-      'pebbles_a',
-      'pebbles_b',
-      'pebbles_c',
+      'flower_red_a', 'flower_red_b', 'flower_blue_a', 'flower_blue_b',
+      'flower_purple', 'flower_sun', 'flower_white', 'flower_tulip_y',
+      'flower_pink', 'flower_bunch_a', 'flower_bunch_b', 'flower_bunch_c',
+      'mushroom_red', 'mushroom_b', 'mushroom_small',
+      'grass_1', 'grass_2', 'grass_3', 'grass_4',
+      'grass_s1', 'grass_s2', 'grass_s3', 'grass_s4',
+      'fern_1', 'fern_2', 'fern_3', 'fern_4', 'fern_big',
+      'pebbles_a', 'pebbles_b', 'pebbles_c',
     ];
     const validFrames = floraFrames.filter((f) => this.textures.get('world_atlas')?.has(f));
 
-    const count = 180;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < 165; i++) {
       const tx = Phaser.Math.Between(4, 90);
       const ty = Phaser.Math.Between(4, 82);
 
-      // Do not scatter in deep river water
-      const riverCenter = 50 + Math.sin(ty * 0.08) * 3.5;
-      if (Math.abs(tx - riverCenter) < 2.0) continue;
+      // Keep clear of river channel & banks AND cliff ledge
+      if (Math.abs(tx - this.riverCenterTileX(ty)) < 3.4) continue;
+      if (tx < 46 && ty >= 61 && ty <= 65) continue;
 
-      // Do not scatter directly on top of mentors (< 2.5 tiles)
       const nearMentor = REFORMATION_CHAPTERS.some(
-        (c) => Math.hypot(tx - c.mentor.x / 16, ty - c.mentor.y / 16) < 2.5
+        (c) => Math.hypot(tx - c.mentor.x / 16, ty - c.mentor.y / 16) < 2.6
       );
       if (nearMentor) continue;
 
-      // Do not scatter wild tall flora on paved city squares and courtyards:
-      // - Wittenberg market & Schlossplatz: (tx: 10..44, ty: 16..32)
-      // - Tetzel field market: (tx: 22..30, ty: 32..38)
-      // - Fuggerplatz Augsburg: (tx: 52..72, ty: 14..30)
-      // - Worms Reichstag courtyard: (tx: 72..92, ty: 14..30)
-      // - Wartburg Castle courtyard: (tx: 12..32, ty: 66..84)
       const isTownPaved =
         (tx >= 10 && tx <= 44 && ty >= 16 && ty <= 32) ||
         (tx >= 22 && tx <= 30 && ty >= 32 && ty <= 38) ||
-        (tx >= 52 && tx <= 72 && ty >= 14 && ty <= 30) ||
+        (tx >= 54 && tx <= 71 && ty >= 14 && ty <= 30) ||
         (tx >= 72 && tx <= 92 && ty >= 14 && ty <= 30) ||
-        (tx >= 12 && tx <= 32 && ty >= 66 && ty <= 84);
+        (tx >= 12 && tx <= 32 && ty >= 66 && ty <= 84) ||
+        (tx >= 74 && tx <= 89 && ty >= 69 && ty <= 83);
 
       const frameKey = validFrames.length > 0 ? Phaser.Math.RND.pick(validFrames) : undefined;
       if (isTownPaved && frameKey && !frameKey.startsWith('pebbles') && !frameKey.startsWith('grass_s')) {
@@ -589,20 +595,21 @@ export class WorldScene extends Phaser.Scene {
   }
 
   public placeOverworldTreesAndNature(): void {
+    // Harmonized Steinzeit-Benchmark scales: trees 0.56..0.68 so buildings anchor the town silhouette
     const getNatureScale = (frame: string): number => {
-      // 16-Bit SNES Proportions based on Steinzeit benchmark
-      if (frame.startsWith('bush_big') || frame.startsWith('bush_huge')) return 0.52;
-      if (frame.startsWith('bush_tall')) return 0.58;
-      if (frame.startsWith('bush_')) return 0.65;
-      if (frame.startsWith('pebbles') || frame.startsWith('rock_small') || frame.startsWith('rock_flat')) return 0.55;
-      if (frame.startsWith('rock_tall') || frame.startsWith('rock_')) return 0.60;
-      if (frame.startsWith('stump_')) return 0.58;
-      if (frame.startsWith('logs_')) return 0.56;
-      if (frame.startsWith('fern_big')) return 0.40;
-      if (frame.startsWith('fern_')) return 0.35;
-      if (frame.startsWith('tree_oak_tall') || frame.startsWith('tree_pine_tall')) return 0.90;
-      if (frame.startsWith('tree_pine_slim') || frame.startsWith('tree_small')) return 0.85;
-      return 1.0;
+      if (frame.startsWith('bush_big') || frame.startsWith('bush_huge')) return 0.48;
+      if (frame.startsWith('bush_tall')) return 0.54;
+      if (frame.startsWith('bush_')) return 0.58;
+      if (frame.startsWith('pebbles') || frame.startsWith('rock_small') || frame.startsWith('rock_flat')) return 0.52;
+      if (frame.startsWith('rock_tall') || frame.startsWith('rock_')) return 0.58;
+      if (frame.startsWith('stump_')) return 0.55;
+      if (frame.startsWith('logs_')) return 0.55;
+      if (frame.startsWith('fern_big')) return 0.38;
+      if (frame.startsWith('fern_')) return 0.34;
+      if (frame.startsWith('tree_oak_tall') || frame.startsWith('tree_pine_tall')) return 0.66;
+      if (frame.startsWith('tree_pine_slim') || frame.startsWith('tree_small')) return 0.56;
+      if (frame.startsWith('tree_')) return 0.60;
+      return 0.60;
     };
 
     interface NatureItem {
@@ -611,163 +618,224 @@ export class WorldScene extends Phaser.Scene {
       frame: string;
       scale?: number;
       isFlora?: boolean;
+      obstacle?: boolean;
     }
 
     const natureItems: NatureItem[] = [
-      // 1. Thüringer Wald / Wartburg Mountain Woods (Southwest)
-      { x: 6, y: 64, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
-      { x: 10, y: 64, frame: 'tree_pine_1', isFlora: true },
-      { x: 6, y: 70, frame: 'tree_pine_2', isFlora: true },
-      { x: 8, y: 74, frame: 'tree_fir_1', isFlora: true },
-      { x: 6, y: 78, frame: 'tree_pine_3', isFlora: true },
-      { x: 10, y: 82, frame: 'tree_fir_2', isFlora: true },
-      { x: 14, y: 84, frame: 'tree_pine_4', isFlora: true },
-      { x: 18, y: 86, frame: 'tree_pine_5', isFlora: true },
-      { x: 28, y: 84, frame: 'tree_pine_1', isFlora: true },
-      { x: 32, y: 80, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
-      { x: 30, y: 74, frame: 'tree_fir_3', isFlora: true },
-      { x: 28, y: 68, frame: 'tree_pine_slim', isFlora: true },
-      // Mountain rocks, stumps & logs
-      { x: 8, y: 80, frame: 'rock_big_a', scale: 0.9 },
-      { x: 12, y: 86, frame: 'rock_moss_a' },
-      { x: 26, y: 86, frame: 'rock_cluster' },
-      { x: 30, y: 82, frame: 'logs_a' },
-      { x: 10, y: 68, frame: 'stump_axe' },
-      { x: 26, y: 68, frame: 'stump_a' },
+      // 1. Thüringer Wald / Wartburg Woods (Southwest)
+      { x: 6, y: 66, frame: 'tree_pine_tall', scale: 0.68, isFlora: true, obstacle: true },
+      { x: 10, y: 66, frame: 'tree_pine_1', isFlora: true, obstacle: true },
+      { x: 6, y: 71, frame: 'tree_pine_2', isFlora: true, obstacle: true },
+      { x: 8, y: 75, frame: 'tree_fir_1', isFlora: true, obstacle: true },
+      { x: 6, y: 79, frame: 'tree_pine_3', isFlora: true, obstacle: true },
+      { x: 10, y: 83, frame: 'tree_fir_2', isFlora: true, obstacle: true },
+      { x: 14, y: 85, frame: 'tree_pine_4', isFlora: true, obstacle: true },
+      { x: 19, y: 86, frame: 'tree_pine_5', isFlora: true, obstacle: true },
+      { x: 29, y: 85, frame: 'tree_pine_1', isFlora: true, obstacle: true },
+      { x: 34, y: 80, frame: 'tree_pine_tall', scale: 0.66, isFlora: true, obstacle: true },
+      { x: 33, y: 74, frame: 'tree_fir_3', isFlora: true, obstacle: true },
+      { x: 30, y: 68, frame: 'tree_pine_slim', isFlora: true, obstacle: true },
+      { x: 8, y: 81, frame: 'rock_big_a', scale: 0.72, obstacle: true },
+      { x: 12, y: 86, frame: 'rock_moss_a', obstacle: true },
+      { x: 26, y: 86, frame: 'rock_cluster', obstacle: true },
+      { x: 32, y: 83, frame: 'logs_a', obstacle: true },
+      { x: 9, y: 69, frame: 'stump_axe', obstacle: true },
+      { x: 28, y: 69, frame: 'stump_a', obstacle: true },
 
-      // 2. Wittenberg Castle Park & Town Environs (Northwest: Clean verges outside paved market)
-      { x: 6, y: 8, frame: 'tree_oak_tall', scale: 0.9, isFlora: true },
-      { x: 12, y: 8, frame: 'tree_oak_1', isFlora: true },
-      { x: 18, y: 8, frame: 'tree_oak_2', isFlora: true },
-      { x: 24, y: 8, frame: 'tree_oak_3', isFlora: true },
-      { x: 30, y: 8, frame: 'tree_oak_tall', scale: 0.9, isFlora: true },
-      { x: 38, y: 8, frame: 'tree_oak_1', isFlora: true },
-      { x: 44, y: 8, frame: 'tree_oak_2', isFlora: true },
-      { x: 6, y: 14, frame: 'tree_oak_2', isFlora: true },
-      { x: 6, y: 22, frame: 'tree_small_1', isFlora: true },
-      { x: 6, y: 28, frame: 'tree_small_2', isFlora: true },
-      { x: 12, y: 15, frame: 'tree_small_1', isFlora: true },
-      { x: 28, y: 16, frame: 'tree_small_2', isFlora: true },
-      { x: 44, y: 15, frame: 'tree_apple', isFlora: true },
-      { x: 30, y: 33, frame: 'tree_willow', isFlora: true },
-      { x: 42, y: 33, frame: 'tree_willow', isFlora: true },
-      // Town garden verges (placed along borders, never obstructing market stalls or square)
+      // 2. Wittenberg Castle Park & Town Verges (Northwest)
+      { x: 6, y: 8, frame: 'tree_oak_tall', scale: 0.68, isFlora: true, obstacle: true },
+      { x: 12, y: 8, frame: 'tree_oak_1', isFlora: true, obstacle: true },
+      { x: 18, y: 8, frame: 'tree_oak_2', isFlora: true, obstacle: true },
+      { x: 24, y: 8, frame: 'tree_oak_3', isFlora: true, obstacle: true },
+      { x: 30, y: 8, frame: 'tree_oak_tall', scale: 0.66, isFlora: true, obstacle: true },
+      { x: 38, y: 8, frame: 'tree_oak_1', isFlora: true, obstacle: true },
+      { x: 43, y: 8, frame: 'tree_oak_2', isFlora: true, obstacle: true },
+      { x: 6, y: 14, frame: 'tree_oak_2', isFlora: true, obstacle: true },
+      { x: 6, y: 22, frame: 'tree_small_1', isFlora: true, obstacle: true },
+      { x: 6, y: 28, frame: 'tree_small_2', isFlora: true, obstacle: true },
+      { x: 13, y: 14, frame: 'tree_small_1', isFlora: true, obstacle: true },
+      { x: 28, y: 15, frame: 'tree_small_2', isFlora: true, obstacle: true },
+      { x: 42, y: 14, frame: 'tree_apple', isFlora: true, obstacle: true },
+      { x: 31, y: 31, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 41, y: 32, frame: 'tree_willow', isFlora: true, obstacle: true },
       { x: 8, y: 26, frame: 'bush_berry_red', isFlora: true },
       { x: 8, y: 18, frame: 'bush_berry_red', isFlora: true },
-      { x: 44, y: 26, frame: 'bush_berry_orange', isFlora: true },
-      { x: 46, y: 22, frame: 'bush_berry_blue', isFlora: true },
+      { x: 44, y: 27, frame: 'bush_berry_orange', isFlora: true },
+      { x: 44, y: 21, frame: 'bush_berry_blue', isFlora: true },
       { x: 22, y: 25, frame: 'pebbles_a' },
       { x: 26, y: 26, frame: 'pebbles_b' },
       { x: 30, y: 24, frame: 'pebbles_c' },
 
-      // 3. River Elbe & Mulde Weeping Willows (along banks)
-      { x: 45, y: 12, frame: 'tree_willow', isFlora: true },
-      { x: 44, y: 28, frame: 'tree_willow', isFlora: true },
-      { x: 45, y: 44, frame: 'tree_willow', isFlora: true },
-      { x: 44, y: 60, frame: 'tree_willow', isFlora: true },
-      { x: 45, y: 76, frame: 'tree_willow', isFlora: true },
-      { x: 55, y: 14, frame: 'tree_willow', isFlora: true },
-      { x: 56, y: 30, frame: 'tree_willow', isFlora: true },
-      { x: 55, y: 46, frame: 'tree_willow', isFlora: true },
-      { x: 56, y: 62, frame: 'tree_willow', isFlora: true },
-      { x: 55, y: 78, frame: 'tree_willow', isFlora: true },
-      { x: 46, y: 20, frame: 'pebbles_a' },
-      { x: 54, y: 38, frame: 'rock_moss_b' },
-      { x: 46, y: 56, frame: 'pebbles_b' },
-      { x: 54, y: 72, frame: 'pebbles_c' },
+      // 3. Elbe Weeping Willows (strictly outside |tx - riverCenter| >= 4.2)
+      { x: 44, y: 12, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 44, y: 31, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 43, y: 42, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 45, y: 69, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 56, y: 14, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 57, y: 32, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 56, y: 48, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 57, y: 64, frame: 'tree_willow', isFlora: true, obstacle: true },
+      { x: 55, y: 83, frame: 'tree_willow', isFlora: true, obstacle: true },
 
-      // 4. Katharina's Monastery Garden & Streuobstwiese
-      { x: 32, y: 42, frame: 'tree_apple', isFlora: true },
-      { x: 40, y: 40, frame: 'tree_pear', isFlora: true },
-      { x: 46, y: 42, frame: 'tree_apple', isFlora: true },
-      { x: 30, y: 44, frame: 'bush_berry_red', isFlora: true },
-      { x: 46, y: 52, frame: 'bush_berry_blue', isFlora: true },
-      // Peasant Orchards around Frankenhausen
-      { x: 52, y: 62, frame: 'tree_apple', isFlora: true },
-      { x: 62, y: 62, frame: 'tree_pear', isFlora: true },
-      { x: 68, y: 66, frame: 'tree_apple', isFlora: true },
-      { x: 50, y: 70, frame: 'bush_big_green', isFlora: true },
-      { x: 68, y: 74, frame: 'bush_berry_orange', isFlora: true },
-      { x: 54, y: 80, frame: 'logs_b' },
+      // 4. Katharina's Monastery Orchard
+      { x: 32, y: 42, frame: 'tree_apple', isFlora: true, obstacle: true },
+      { x: 40, y: 41, frame: 'tree_pear', isFlora: true, obstacle: true },
+      { x: 45, y: 43, frame: 'tree_apple', isFlora: true, obstacle: true },
+      { x: 30, y: 45, frame: 'bush_berry_red', isFlora: true },
+      { x: 45, y: 54, frame: 'bush_berry_blue', isFlora: true },
 
-      // 5. East Border Forests (Worms & Augsburg)
-      { x: 56, y: 8, frame: 'tree_autumn_1', isFlora: true },
-      { x: 66, y: 8, frame: 'tree_autumn_2', isFlora: true },
-      { x: 76, y: 8, frame: 'tree_oak_tall', scale: 0.9, isFlora: true },
-      { x: 86, y: 8, frame: 'tree_oak_1', isFlora: true },
-      { x: 92, y: 8, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
-      { x: 92, y: 18, frame: 'tree_pine_1', isFlora: true },
-      { x: 92, y: 26, frame: 'tree_autumn_1', isFlora: true },
-      { x: 92, y: 36, frame: 'tree_pine_2', isFlora: true },
-      { x: 92, y: 48, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
-      { x: 92, y: 60, frame: 'tree_autumn_2', isFlora: true },
-      { x: 92, y: 72, frame: 'tree_pine_3', isFlora: true },
-      { x: 92, y: 82, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
-      { x: 72, y: 84, frame: 'tree_pine_1', isFlora: true },
-      { x: 78, y: 84, frame: 'tree_pine_2', isFlora: true },
-      { x: 84, y: 84, frame: 'tree_pine_tall', scale: 0.9, isFlora: true },
-      { x: 88, y: 84, frame: 'tree_fir_1', isFlora: true },
-      { x: 72, y: 32, frame: 'tree_oak_2', isFlora: true },
-      { x: 74, y: 38, frame: 'tree_small_3', isFlora: true },
-      { x: 70, y: 44, frame: 'bush_big_green', isFlora: true },
+      // 5. Frankenhausen Orchard (strictly off the river! tx >= 57)
+      { x: 57, y: 65, frame: 'tree_apple', isFlora: true, obstacle: true },
+      { x: 64, y: 65, frame: 'tree_pear', isFlora: true, obstacle: true },
+      { x: 70, y: 67, frame: 'tree_apple', isFlora: true, obstacle: true },
+      { x: 68, y: 78, frame: 'bush_berry_orange', isFlora: true },
+      { x: 54, y: 82, frame: 'logs_b', obstacle: true },
+
+      // 6. East Border Forests (Worms & Augsburg)
+      { x: 56, y: 8, frame: 'tree_autumn_1', isFlora: true, obstacle: true },
+      { x: 66, y: 8, frame: 'tree_autumn_2', isFlora: true, obstacle: true },
+      { x: 76, y: 8, frame: 'tree_oak_tall', scale: 0.66, isFlora: true, obstacle: true },
+      { x: 86, y: 8, frame: 'tree_oak_1', isFlora: true, obstacle: true },
+      { x: 92, y: 8, frame: 'tree_pine_tall', scale: 0.68, isFlora: true, obstacle: true },
+      { x: 92, y: 18, frame: 'tree_pine_1', isFlora: true, obstacle: true },
+      { x: 92, y: 26, frame: 'tree_autumn_1', isFlora: true, obstacle: true },
+      { x: 92, y: 36, frame: 'tree_pine_2', isFlora: true, obstacle: true },
+      { x: 92, y: 48, frame: 'tree_pine_tall', scale: 0.68, isFlora: true, obstacle: true },
+      { x: 92, y: 60, frame: 'tree_autumn_2', isFlora: true, obstacle: true },
+      { x: 92, y: 72, frame: 'tree_pine_3', isFlora: true, obstacle: true },
+      { x: 92, y: 82, frame: 'tree_pine_tall', scale: 0.68, isFlora: true, obstacle: true },
+      { x: 73, y: 84, frame: 'tree_pine_1', isFlora: true, obstacle: true },
+      { x: 79, y: 84, frame: 'tree_pine_2', isFlora: true, obstacle: true },
+      { x: 85, y: 84, frame: 'tree_pine_tall', scale: 0.66, isFlora: true, obstacle: true },
+      { x: 89, y: 84, frame: 'tree_fir_1', isFlora: true, obstacle: true },
+      { x: 73, y: 32, frame: 'tree_oak_2', isFlora: true, obstacle: true },
+      { x: 74, y: 38, frame: 'tree_small_3', isFlora: true, obstacle: true },
+      { x: 71, y: 45, frame: 'bush_big_green', isFlora: true },
     ];
 
     for (const item of natureItems) {
-      if (this.textures.get('world_atlas')?.has(item.frame)) {
-        const finalScale = item.scale !== undefined ? item.scale : getNatureScale(item.frame);
-        const spr = this.add
-          .image(item.x * 16, item.y * 16, 'world_atlas', item.frame)
-          .setOrigin(0.5, 0.9)
-          .setScale(finalScale)
-          .setDepth(item.y * 16);
+      if (Math.abs(item.x - this.riverCenterTileX(item.y)) < 3.6) continue;
+      if (!this.textures.get('world_atlas')?.has(item.frame)) continue;
 
-        if (item.isFlora) {
-          this.livingWorldManager.registerFlora(spr);
-        }
+      const finalScale = item.scale !== undefined ? item.scale : getNatureScale(item.frame);
+      const px = item.x * 16;
+      const py = item.y * 16;
+      const spr = this.add
+        .image(px, py, 'world_atlas', item.frame)
+        .setOrigin(0.5, 0.9)
+        .setScale(finalScale)
+        .setDepth(py);
+
+      if (item.isFlora) {
+        this.livingWorldManager.registerFlora(spr);
+      }
+      if (item.obstacle) {
+        this.addStaticBox(px, py - 4, 14, 10);
+      }
+    }
+  }
+
+  public buildPlateauCliffs(): void {
+    const atlas = this.textures.get('world_atlas');
+    const cliffRowY = 63 * 16 + 4;
+    const isStairCol = (tx: number) => (tx >= 14 && tx <= 16) || (tx >= 32 && tx <= 34);
+
+    const cliffSprites = ['rock_tall_a', 'rock_big_a', 'rock_moss_d', 'stone_wall', 'rock_big_b'];
+    let idx = 0;
+
+    for (let tx = 2; tx <= 44; tx += 2) {
+      if (isStairCol(tx)) continue;
+      const frame = cliffSprites[idx % cliffSprites.length];
+      idx++;
+      if (atlas?.has(frame)) {
+        this.add
+          .image(tx * 16 + 8, cliffRowY + 4, 'world_atlas', frame)
+          .setOrigin(0.5, 0.85)
+          .setScale(0.62)
+          .setDepth(cliffRowY);
+      }
+    }
+
+    // Solid physics walls on cliff segments leaving the two open stairways (14..16 & 32..34) freely walkable!
+    const bands: [number, number][] = [
+      [0, 13.6],
+      [17.2, 31.6],
+      [35.2, 45.2],
+    ];
+    for (const [startTx, endTx] of bands) {
+      const cx = ((startTx + endTx) * 0.5) * 16;
+      const w = (endTx - startTx) * 16;
+      this.addStaticBox(cx, cliffRowY, w, 22);
+    }
+
+    // Visual stair beacons / stone posts flanking both Wartburg ascent passes
+    for (const markerTx of [13.4, 17.4, 31.4, 35.4]) {
+      if (atlas?.has('torch')) {
+        const torch = this.add
+          .image(markerTx * 16, cliffRowY + 6, 'world_atlas', 'torch')
+          .setOrigin(0.5, 0.9)
+          .setScale(0.7)
+          .setDepth(cliffRowY + 8);
+        this.livingWorldManager.registerFireSource(torch.x, torch.y - 6, false, 18, 0xffaa44);
       }
     }
   }
 
   private placeWorldDecor(): void {
     for (const d of REFORMATION_DECOR) {
-      if (this.textures.exists(d.spriteKey)) {
-        this.add.image(d.x, d.y, d.spriteKey).setOrigin(0.5, 0.9).setScale(d.scale || 1.0).setDepth(d.y);
+      if (!this.textures.exists(d.spriteKey)) continue;
+      const scale = d.scale || 1.0;
+      const spr = this.add.image(d.x, d.y, d.spriteKey).setOrigin(0.5, 0.9).setScale(scale).setDepth(d.y);
+
+      if (d.isObstacle) {
+        const w = spr.width * scale;
+        const h = spr.height * scale;
+        if (TALL_BUILDING_KEYS.has(d.spriteKey)) {
+          const colW = Math.max(28, Math.round(w * 0.72));
+          const colH = Math.min(34, Math.max(20, Math.round(h * 0.26)));
+          this.addStaticBox(d.x, d.y - colH * 0.5 - 8, colW, colH);
+        } else {
+          const colW = Math.min(42, Math.max(12, Math.round(w * 0.62)));
+          const colH = Math.min(16, Math.max(8, Math.round(h * 0.34)));
+          this.addStaticBox(d.x, d.y - colH * 0.45, colW, colH);
+        }
       }
     }
   }
 
   private placeResourceNodes(): void {
     for (const n of RESOURCE_NODES) {
-      if (this.textures.exists(n.spriteKey)) {
-        this.add.image(n.x, n.y, n.spriteKey).setOrigin(0.5, 0.85).setScale(0.85).setDepth(n.y);
-        this.livingWorldManager.registerResourceHotspot(n.x, n.y);
-      }
+      if (!this.textures.exists(n.spriteKey)) continue;
+      this.add.image(n.x, n.y, n.spriteKey).setOrigin(0.5, 0.85).setScale(0.85).setDepth(n.y);
+      this.livingWorldManager.registerResourceHotspot(n.x, n.y);
+      this.addStaticBox(n.x, n.y - 4, 18, 10);
     }
   }
 
   private setupTargets(): void {
     this.targets = [];
 
-    // 1. Mentors aus chapters.ts (16x32 native Sprites mit Atemanimation)
+    // 1. Mentors (16x32 native sprites, zero scaleY morph)
     for (const ch of REFORMATION_CHAPTERS) {
       const m = ch.mentor;
-      if (this.textures.exists(m.spriteKey)) {
-        const spr = this.add.sprite(m.x, m.y, m.spriteKey, 0)
-          .setOrigin(0.5, 0.9)
-          .setScale(1.0)
-          .setDepth(m.y + 12);
-        this.livingWorldManager.registerMentor(spr);
-        this.targets.push({
-          id: `mentor_${ch.id}`,
-          kind: 'mentor',
-          name: m.name,
-          sub: m.role,
-          x: m.x,
-          y: m.y,
-          minChapter: ch.id,
-          actionTip: '[E] Sprechen',
-        });
+      if (!this.textures.exists(m.spriteKey)) continue;
+      const spr = this.add.sprite(m.x, m.y, m.spriteKey, 0).setOrigin(0.5, 0.9).setScale(1.0).setDepth(m.y + 12);
+      if (this.anims.exists(`${m.spriteKey}-idle-down`)) {
+        spr.play(`${m.spriteKey}-idle-down`);
       }
+      this.livingWorldManager.registerMentor(spr);
+      this.targets.push({
+        id: `mentor_${ch.id}`,
+        kind: 'mentor',
+        name: m.name,
+        sub: m.role,
+        x: m.x,
+        y: m.y,
+        minChapter: 1,
+        chapterId: ch.id,
+        actionTip: '[E] Sprechen',
+        sprite: spr,
+      });
     }
 
     // 2. Relikte / Leitfunde
@@ -791,6 +859,7 @@ export class WorldScene extends Phaser.Scene {
         y: r.y,
         minChapter: 1,
         relic: r,
+        discovered: gameState.discoveredRelics.has(r.id),
         actionTip: '[E] Bergen & Prüfen',
       });
     }
@@ -831,64 +900,121 @@ export class WorldScene extends Phaser.Scene {
         id: `station_${st.id}`,
         kind: 'station',
         name: st.name,
-        sub: `Didaktische Station · ${st.badge}`,
+        sub: `Station · ${st.badge}`,
         x: st.x,
         y: st.y,
         minChapter: st.chapter,
         stationId: st.id,
-        actionTip: '[E] Station betreten',
+        actionTip: '[E] Station öffnen',
       });
     }
 
-    // 5. Begehbare Innenräume & Warp-Türen
-    for (const room of ROOMS) {
-      // Outdoor entrance door: located directly at building doorstep
+    // 5. Begehbare Gebäudeportale (alle 8 historischen Innenräume über InteriorScene!)
+    const buildingDoors: { id: string; name: string; x: number; y: number; interiorId: string; chapterId: number }[] = [
+      { id: 'door_schlosskirche', name: 'Schlosskirche Wittenberg', x: 20 * 16, y: 19 * 16 + 10, interiorId: 'schlosskirche_portal', chapterId: 1 },
+      { id: 'door_cranach', name: 'Cranach Druckerei & Atelier', x: 35 * 16, y: 19 * 16 + 10, interiorId: 'cranach_werkstatt_druckerei', chapterId: 2 },
+      { id: 'door_fugger', name: 'Fuggerpalais Audienzsaal', x: 62 * 16, y: 19 * 16 + 10, interiorId: 'fuggerpalais_augsburg', chapterId: 3 },
+      { id: 'door_worms', name: 'Reichstagssaal zu Worms', x: 80 * 16, y: 19 * 16 + 10, interiorId: 'reichstagssaal_worms', chapterId: 4 },
+      { id: 'door_wartburg', name: 'Wartburg Lutherstube', x: 24 * 16, y: 75 * 16 + 10, interiorId: 'wartburg_stube', chapterId: 5 },
+      { id: 'door_kloster', name: 'Schwarzes Kloster Refektorium', x: 36 * 16, y: 47 * 16 + 10, interiorId: 'lutherstube_wittenberg', chapterId: 6 },
+      { id: 'door_bauern', name: 'Bauernstube Frankenhausen', x: 58 * 16, y: 73 * 16 + 10, interiorId: 'bauernrat_stube', chapterId: 7 },
+      { id: 'door_augsburg', name: 'Augsburger Friedenssaal', x: 81 * 16, y: 73 * 16 + 10, interiorId: 'rathaus_friedenssaal', chapterId: 8 },
+    ];
+    for (const d of buildingDoors) {
       this.targets.push({
-        id: room.outdoorDoorId,
+        id: d.id,
         kind: 'door',
-        name: room.name,
+        name: d.name,
         sub: 'Gebäude betreten',
-        x: room.outdoorDoor.x,
-        y: room.outdoorDoor.y,
+        x: d.x,
+        y: d.y,
         minChapter: 1,
+        chapterId: d.chapterId,
+        interiorId: d.interiorId,
         actionTip: '[E] Betreten',
-        warpTarget: {
-          x: room.entrance.x,
-          y: room.entrance.y,
-          isIndoor: true,
-          name: room.name,
-          roomId: room.id,
-        },
-      });
-
-      // Indoor exit door: located at room threshold
-      this.targets.push({
-        id: `door_exit_${room.id}`,
-        kind: 'door',
-        name: 'Ausgang nach draußen',
-        sub: 'Hinaus ins Freie',
-        x: room.exit.x,
-        y: room.exit.y,
-        minChapter: 1,
-        actionTip: '[E] Verlassen',
-        warpTarget: {
-          x: room.outdoorWarp.x,
-          y: room.outdoorWarp.y,
-          isIndoor: false,
-          name: 'Vorplatz',
-        },
       });
     }
   }
 
   private initInteractionLabel(): void {
-    if (this.labelDiv) return;
+    const existing = document.getElementById('world-dom-label');
+    if (existing) {
+      this.labelDiv = existing;
+      return;
+    }
     this.labelDiv = document.createElement('div');
     this.labelDiv.id = 'world-dom-label';
     this.labelDiv.className = 'world-dom-label';
     this.labelDiv.style.display = 'none';
     this.labelDiv.addEventListener('click', () => this.triggerInteraction());
     document.body.appendChild(this.labelDiv);
+  }
+
+  private initMentorNameplates(): void {
+    const existing = document.getElementById('floating-nameplates-layer');
+    if (existing) existing.remove();
+    this.nameplatesLayer = document.createElement('div');
+    this.nameplatesLayer.id = 'floating-nameplates-layer';
+    document.body.appendChild(this.nameplatesLayer);
+
+    this.mentorNameplates = [];
+    for (const t of this.targets) {
+      if (t.kind !== 'mentor' || !t.sprite || !t.chapterId) continue;
+      const el = document.createElement('div');
+      el.className = 'floating-nameplate';
+      el.innerHTML = `<span class="fp-name">${t.name}</span><span class="fp-role">${t.sub}</span>`;
+      this.nameplatesLayer.appendChild(el);
+      this.mentorNameplates.push({
+        chId: t.chapterId,
+        name: t.name,
+        role: t.sub,
+        sprite: t.sprite,
+        el,
+      });
+    }
+  }
+
+  private projectToScreen(wx: number, wy: number): { sx: number; sy: number; rect: DOMRect } {
+    const rect = this.game.canvas.getBoundingClientRect();
+    const cam = this.cameras.main;
+    const sx = rect.left + ((wx - cam.worldView.x) / Math.max(1, cam.worldView.width)) * rect.width;
+    const sy = rect.top + ((wy - cam.worldView.y) / Math.max(1, cam.worldView.height)) * rect.height;
+    return { sx, sy, rect };
+  }
+
+  private updateMentorNameplates(isModalOpen: boolean): void {
+    if (!this.nameplatesLayer) return;
+    if (isModalOpen) {
+      this.nameplatesLayer.style.display = 'none';
+      return;
+    }
+    this.nameplatesLayer.style.display = 'block';
+    for (const np of this.mentorNameplates) {
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, np.sprite.x, np.sprite.y);
+      if (dist > 155 || (this.activeTarget?.kind === 'mentor' && this.activeTarget.chapterId === np.chId)) {
+        np.el.style.display = 'none';
+        continue;
+      }
+      const { sx, sy, rect } = this.projectToScreen(np.sprite.x, np.sprite.y - 32);
+      if (sx < rect.left + 20 || sx > rect.right - 20 || sy < rect.top + 48 || sy > rect.bottom - 20) {
+        np.el.style.display = 'none';
+        continue;
+      }
+      np.el.style.display = 'flex';
+      np.el.style.left = `${Math.round(sx)}px`;
+      np.el.style.top = `${Math.round(sy)}px`;
+
+      // Turn mentor smoothly toward nearby player
+      if (dist < 48) {
+        const dx = this.player.x - np.sprite.x;
+        const dy = this.player.y - np.sprite.y;
+        const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+        const key = `${np.sprite.texture.key}-idle-${dir}`;
+        if (this.anims.exists(key) && np.sprite.anims.currentAnim?.key !== key) {
+          np.sprite.play(key);
+        }
+      }
+    }
   }
 
   public refreshCharacterAppearance(): void {
@@ -901,11 +1027,34 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  update(time: number, delta: number): void {
-    // 1. Movement Handling
+  update(_time: number, delta: number): void {
+    const pBody = this.player?.body as Phaser.Physics.Arcade.Body | undefined;
+    const isModalOpen = Boolean((window as any).__isModalOpen?.());
+
+    // Keep relic discovery state synced with GameState
+    for (const t of this.targets) {
+      if (t.kind === 'relic' && t.relic) {
+        t.discovered = gameState.discoveredRelics.has(t.relic.id);
+      }
+    }
+
+    if (isModalOpen) {
+      if (pBody) pBody.setVelocity(0, 0);
+      this.playIdleAnim();
+      if (this.labelDiv) this.labelDiv.style.display = 'none';
+      this.updateMentorNameplates(true);
+      this.companionManager.update(this.player, this.targets, delta);
+      this.ambientSpeechManager.update(this.player.x, this.player.y, delta);
+      return;
+    }
+
+    // Playtime Ticker (Pause Dashboard live metric)
+    gameState.playTimeSeconds += delta / 1000;
+
+    // 1. Movement Handling via Arcade Physics Velocity
     let vx = 0;
     let vy = 0;
-    const speed = 110;
+    const speed = 112;
 
     const tc = (window as any).__touchControls;
     if (tc && (tc.dx !== 0 || tc.dy !== 0)) {
@@ -923,122 +1072,63 @@ export class WorldScene extends Phaser.Scene {
       vy *= 0.7071;
     }
 
-    // Dynamic movement clamping: room boundaries if indoors, world bounds if outdoors
-    let minX = 24;
-    let maxX = 94 * 16;
-    let minY = 24;
-    let maxY = 86 * 16;
-
-    if (this.currentRoom) {
-      minX = this.currentRoom.x + 20;
-      maxX = this.currentRoom.x + this.currentRoom.w - 20;
-      minY = this.currentRoom.y + 36;
-      maxY = this.currentRoom.y + this.currentRoom.h - 14;
+    if (pBody) {
+      pBody.setVelocity(vx, vy);
     }
 
-    const nextX = Phaser.Math.Clamp(this.player.x + (vx * delta) / 1000, minX, maxX);
-    const nextY = Phaser.Math.Clamp(this.player.y + (vy * delta) / 1000, minY, maxY);
+    this.player.setDepth(this.player.y);
+    const movedDist = Math.hypot(this.player.x - this.lastPosX, this.player.y - this.lastPosY);
+    this.lastPosX = this.player.x;
+    this.lastPosY = this.player.y;
+    gameState.playerX = this.player.x;
+    gameState.playerY = this.player.y;
+    if (movedDist > 0.1 && movedDist < 32) {
+      gameState.walkedDistanceMeters += movedDist * 0.05;
+    }
 
     if (vx !== 0 || vy !== 0) {
-      this.player.x = nextX;
-      this.player.y = nextY;
-      this.player.setDepth(this.player.y);
-
-      gameState.playerX = this.player.x;
-      gameState.playerY = this.player.y;
-      gameState.walkedDistanceMeters += Math.hypot(vx, vy) * (delta / 1000) * 0.05;
-
-      // Surface detection for footsteps
-      let surface: 'stone' | 'dirt' | 'grass' | 'wood' = 'grass';
-      if (this.currentRoom) {
-        surface = 'wood';
-      } else {
-        const tx = this.player.x / 16;
-        const ty = this.player.y / 16;
-        if (
-          Math.hypot((tx - 26) * 0.85, (ty - 22) * 1.0) < 8.5 ||
-          Math.hypot((tx - 38) * 0.9, (ty - 21) * 1.0) < 5.5 ||
-          Math.hypot((tx - 62) * 0.9, (ty - 21) * 1.0) < 5.8 ||
-          Math.hypot((tx - 80) * 0.85, (ty - 21) * 1.0) < 7.5 ||
-          Math.hypot((tx - 22) * 0.85, (ty - 73) * 1.0) < 7.0 ||
-          Math.hypot((tx - 80) * 0.85, (ty - 75) * 1.0) < 6.5
-        ) {
-          surface = 'stone';
-        } else if (ty >= 68 && ty <= 82 && tx >= 48 && tx <= 66) {
-          surface = 'dirt';
-        }
+      this.stepTimer += delta;
+      if (this.stepTimer >= 260) {
+        this.stepTimer = 0;
+        const surface = this.detectSurface(this.player.x / 16, this.player.y / 16);
+        sound.footstep(surface);
       }
-      sound.footstep(surface);
 
-      // Facing & Walk Animation
       const g = gameState.gender;
       this.player.setFlipX(false);
       if (Math.abs(vx) > Math.abs(vy)) {
-        if (vx > 0) {
-          this.facing = 'right';
-          const aKey = this.anims.exists(`walk-${g}-right`) ? `walk-${g}-right` : 'walk-right';
-          this.player.play(aKey, true);
-        } else {
-          this.facing = 'left';
-          const aKey = this.anims.exists(`walk-${g}-left`) ? `walk-${g}-left` : 'walk-left';
-          this.player.play(aKey, true);
-        }
+        this.facing = vx > 0 ? 'right' : 'left';
       } else {
-        if (vy > 0) {
-          this.facing = 'down';
-          const aKey = this.anims.exists(`walk-${g}-down`) ? `walk-${g}-down` : 'walk-down';
-          this.player.play(aKey, true);
-        } else {
-          this.facing = 'up';
-          const aKey = this.anims.exists(`walk-${g}-up`) ? `walk-${g}-up` : 'walk-up';
-          this.player.play(aKey, true);
-        }
+        this.facing = vy > 0 ? 'down' : 'up';
       }
+      const walkKey = this.anims.exists(`walk-${g}-${this.facing}`) ? `walk-${g}-${this.facing}` : `walk-${this.facing}`;
+      this.player.play(walkKey, true);
     } else {
-      const g = gameState.gender;
-      this.player.setFlipX(false);
-      const idleKey = this.anims.exists(`idle-${g}-${this.facing}`)
-        ? `idle-${g}-${this.facing}`
-        : (this.anims.exists(`idle-${this.facing}`) ? `idle-${this.facing}` : null);
-      if (idleKey) {
-        this.player.play(idleKey, true);
-      } else {
-        this.player.stop();
-        if (this.facing === 'down') this.player.setFrame(0);
-        else if (this.facing === 'up') this.player.setFrame(6);
-        else if (this.facing === 'right') this.player.setFrame(12);
-        else if (this.facing === 'left') this.player.setFrame(18);
-        else this.player.setFrame(0);
-      }
+      this.playIdleAnim();
     }
 
-    // 2. Proximity Check (< 44px)
+    // 2. Proximity Check (< 44px) & Floating Nameplates
     this.updateProximityLabel();
+    this.updateMentorNameplates(false);
 
     // 3. Subsystem Updates
-    this.wildlifeManager.update(delta, this.player.x, this.player.y);
+    this.wildlifeManager.update(delta, this.player.x, this.player.y, (x, y) => this.isWorldPointBlocked(x, y));
     this.livingWorldManager.update(delta);
     this.companionManager.update(this.player, this.targets, delta);
     this.atmosphereManager.update(delta, this.cameras.main.scrollX, this.cameras.main.scrollY);
     this.ambientSpeechManager.update(this.player.x, this.player.y, delta);
     this.updateQuestCompass();
 
-    // 4. Chapter Change Banner
+    // 4. Chapter Change Banner & Music
     if (gameState.chapter !== this.lastBannerChapter) {
       this.lastBannerChapter = gameState.chapter;
-      const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter);
-      if (curCh) {
-        this.chapterBanner.show({
-          chapterNumber: curCh.number,
-          title: curCh.title,
-          subtitle: `${curCh.year} · ${curCh.location}`,
-        });
-        this.atmosphereManager.setChapterMood(curCh.number);
-        sound.startBGM(curCh.number);
-      }
+      const curCh = gameState.getChapterData();
+      this.showChapterBanner(curCh);
+      this.atmosphereManager.setChapterMood(curCh.number);
+      musicManager.playChapterTrack(curCh.number);
     }
 
-    // 5. Input Check for [E] / Space
+    // 5. Interaction Key Check ([E] / Space / Touch A)
     const justPressedE =
       (this.wasd?.E && Phaser.Input.Keyboard.JustDown(this.wasd.E)) ||
       (this.spaceKey && Phaser.Input.Keyboard.JustDown(this.spaceKey)) ||
@@ -1050,31 +1140,46 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  private playIdleAnim(): void {
+    if (!this.player) return;
+    const g = gameState.gender;
+    this.player.setFlipX(false);
+    const idleKey = this.anims.exists(`idle-${g}-${this.facing}`)
+      ? `idle-${g}-${this.facing}`
+      : (this.anims.exists(`idle-${this.facing}`) ? `idle-${this.facing}` : null);
+    if (idleKey) {
+      this.player.play(idleKey, true);
+    }
+  }
+
+  private detectSurface(tx: number, ty: number): 'stone' | 'dirt' | 'grass' | 'wood' {
+    if (this.isBridgeRow(ty) && Math.abs(tx - this.riverCenterTileX(ty)) < 3.0) {
+      return 'wood';
+    }
+    if (
+      Math.hypot((tx - 25) * 0.85, (ty - 23) * 1.0) < 9.0 ||
+      Math.hypot((tx - 37) * 0.9, (ty - 21) * 1.0) < 5.5 ||
+      Math.hypot((tx - 62) * 0.9, (ty - 21) * 1.0) < 5.8 ||
+      Math.hypot((tx - 80) * 0.85, (ty - 21) * 1.0) < 7.5 ||
+      Math.hypot((tx - 22) * 0.85, (ty - 73) * 1.0) < 7.2 ||
+      Math.hypot((tx - 81) * 0.85, (ty - 75) * 1.0) < 6.8
+    ) {
+      return 'stone';
+    }
+    if (ty >= 68 && ty <= 82 && tx >= 54 && tx <= 70) {
+      return 'dirt';
+    }
+    return 'grass';
+  }
+
   private updateProximityLabel(): void {
     if (!this.labelDiv) return;
 
     let closest: InteractiveTarget | null = null;
-    let minDist = 44; // Strikte Single-Proximity Grenze (< 44px)
+    let minDist = 44;
 
     for (const t of this.targets) {
       if (t.minChapter > gameState.chapter) continue;
-
-      // Filter targets strictly by outdoor/indoor room context
-      const targetIsIndoor = t.x >= 96 * 16;
-      if (this.currentRoom) {
-        if (!targetIsIndoor) continue;
-        if (
-          t.x < this.currentRoom.x ||
-          t.x > this.currentRoom.x + this.currentRoom.w ||
-          t.y < this.currentRoom.y ||
-          t.y > this.currentRoom.y + this.currentRoom.h
-        ) {
-          continue;
-        }
-      } else {
-        if (targetIsIndoor) continue;
-      }
-
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, t.x, t.y);
       if (dist < minDist) {
         minDist = dist;
@@ -1082,76 +1187,115 @@ export class WorldScene extends Phaser.Scene {
       }
     }
 
+    // Companion Tölpel petting fallback when close & no primary target
+    if (!closest && this.companionManager?.sprite) {
+      const dog = this.companionManager.sprite;
+      const dDog = Phaser.Math.Distance.Between(this.player.x, this.player.y, dog.x, dog.y);
+      if (dDog < 32) {
+        closest = {
+          id: 'companion_toelpel',
+          kind: 'companion',
+          name: 'Tölpel (Begleiter)',
+          sub: 'Luthers treuer Hofhund',
+          x: dog.x,
+          y: dog.y,
+          minChapter: 1,
+          actionTip: '[E] Streicheln ❤️',
+        };
+      }
+    }
+
     this.activeTarget = closest;
 
     if (closest) {
-      const cam = this.cameras.main;
-      const screenX = (closest.x - cam.scrollX) * cam.zoom + cam.width / 2;
-      const screenY = (closest.y - cam.scrollY) * cam.zoom + cam.height / 2 - 28;
+      const { sx, sy, rect } = this.projectToScreen(closest.x, closest.y - 26);
+      const clampedX = Math.max(rect.left + 76, Math.min(rect.right - 76, sx));
+      const clampedY = Math.max(rect.top + 52, Math.min(rect.bottom - 26, sy));
 
-      this.labelDiv.innerHTML = `<strong>${closest.name}</strong><br/><span style="font-size:10px; color:#fbbf24;">${closest.actionTip || '[E] Interagieren'}</span>`;
-      this.labelDiv.style.left = `${screenX}px`;
-      this.labelDiv.style.top = `${screenY}px`;
-      this.labelDiv.style.display = 'block';
+      this.labelDiv.innerHTML = `<strong>${closest.name}</strong><span class="wdl-tip">${closest.actionTip || '[E] Interagieren'}</span>`;
+      this.labelDiv.style.left = `${Math.round(clampedX)}px`;
+      this.labelDiv.style.top = `${Math.round(clampedY)}px`;
+      this.labelDiv.style.display = 'flex';
     } else {
       this.labelDiv.style.display = 'none';
     }
   }
 
-  private triggerInteraction(): void {
+  public triggerInteraction(): void {
+    if ((window as any).__isModalOpen?.()) return;
     if (!this.activeTarget) return;
     const t = this.activeTarget;
     sound.click();
 
     const uiScene = this.scene.get('UIScene') as any;
-    if (!uiScene) return;
 
     if (t.kind === 'mentor') {
-      const curCh = REFORMATION_CHAPTERS.find((c) => c.number === gameState.chapter);
-      if (curCh) {
-        this.focusOnDialog(t.x, t.y);
-        uiScene.openMentorDialog(curCh.mentor, () => this.resetDialogFocus());
-        gameState.completeObjective(curCh.number, 0);
+      const targetCh = t.chapterId ?? gameState.chapter;
+      this.focusOnDialog(t.x, t.y);
+      if ((window as any).__openMentorDialog) {
+        (window as any).__openMentorDialog(targetCh, () => this.resetDialogFocus());
+      } else if (uiScene?.openMentorDialog) {
+        uiScene.openMentorDialog(targetCh, () => this.resetDialogFocus());
       }
+      if (targetCh === gameState.chapter) {
+        gameState.completeObjective(targetCh, 0);
+      }
+    } else if (t.kind === 'companion') {
+      this.companionManager.pet();
     } else if (t.kind === 'relic' && t.relic) {
-      uiScene.openRelicModal(t.relic);
-    } else if (t.kind === 'station' && t.stationId) {
-      uiScene.openStationModal(t.stationId);
-    } else if (t.kind === 'door') {
-      if (t.id.includes('cranach')) {
-        this.enterInterior('cranach_werkstatt_druckerei');
-      } else if (t.id.includes('wartburg')) {
-        this.enterInterior('wartburg_stube');
-      } else if (t.id.includes('worms')) {
-        this.enterInterior('lutherstube_wittenberg');
-      } else if (t.warpTarget) {
-        this.warpTo(t.warpTarget);
+      if ((window as any).__openArtifactInspector) {
+        (window as any).__openArtifactInspector(t.relic.id);
       } else {
-        this.enterInterior('lutherstube_wittenberg');
+        uiScene?.openRelicModal?.(t.relic);
       }
+    } else if (t.kind === 'station' && t.stationId) {
+      if ((window as any).__openStation) {
+        (window as any).__openStation(t.stationId);
+      } else {
+        uiScene?.openStationModal?.(t.stationId);
+      }
+    } else if (t.kind === 'door') {
+      const roomId = t.interiorId || 'lutherstube_wittenberg';
+      if (roomId === 'fuggerpalais_augsburg' && gameState.chapter === 3) {
+        gameState.completeObjective(3, 2);
+      } else if (roomId === 'reichstagssaal_worms' && gameState.chapter === 4) {
+        gameState.completeObjective(4, 1);
+      } else if (roomId === 'lutherstube_wittenberg' && gameState.chapter === 6) {
+        gameState.completeObjective(6, 2);
+      } else if (roomId === 'bauernrat_stube' && gameState.chapter === 7) {
+        gameState.completeObjective(7, 1);
+      } else if (roomId === 'rathaus_friedenssaal' && gameState.chapter === 8) {
+        gameState.completeObjective(8, 1);
+      }
+      this.enterInterior(roomId);
     } else if (t.kind === 'resource' && t.nodeDef) {
       gameState.addItem(t.nodeDef.lootItem as ReformationItemId, t.nodeDef.lootCount);
-      uiScene.showToast(`+${t.nodeDef.lootCount} ${t.nodeDef.name} gesammelt!`);
+      uiScene?.showToast?.(`+${t.nodeDef.lootCount} ${t.nodeDef.name} gesammelt!`);
       sound.questStep();
+      if ((t.nodeDef.id === 'node_lettern' || t.nodeDef.id === 'node_pergament') && gameState.chapter === 2) {
+        gameState.completeObjective(2, 1);
+      } else if (t.nodeDef.id === 'node_holz' && gameState.chapter === 5) {
+        gameState.completeObjective(5, 1);
+      } else if (t.nodeDef.id === 'node_kraeuter' && gameState.chapter === 6) {
+        gameState.completeObjective(6, 1);
+      }
     }
   }
 
-  public focusOnDialog(targetX: number, targetY: number): void {
-    const cam = this.cameras.main;
+  public focusOnDialog(_targetX: number, _targetY: number): void {
     this.tweens.add({
-      targets: cam,
+      targets: this.cameras.main,
       zoom: 1.32,
-      duration: 450,
+      duration: 400,
       ease: 'Cubic.easeInOut',
     });
   }
 
   public resetDialogFocus(): void {
-    const cam = this.cameras.main;
     this.tweens.add({
-      targets: cam,
+      targets: this.cameras.main,
       zoom: 1.0,
-      duration: 400,
+      duration: 350,
       ease: 'Cubic.easeInOut',
     });
   }
@@ -1165,77 +1309,51 @@ export class WorldScene extends Phaser.Scene {
     let targetY = curCh.mentor.y;
     let targetName = curCh.mentor.name;
 
-    // Stufen-Logik:
     if (!objectives[0]) {
-      // Stufe 0: Sprich mit Mentor
       targetX = curCh.mentor.x;
       targetY = curCh.mentor.y;
       targetName = curCh.mentor.name;
     } else if (!objectives[1]) {
-      // Stufe 1: Zweites Ziel (z. B. Tür, Markt, Ablasskasten)
-      const interTarget = this.targets.find(
-        (t) => (t.kind === 'door' || t.kind === 'resource') && t.minChapter <= curCh.number
-      );
-      if (interTarget) {
-        targetX = interTarget.x;
-        targetY = interTarget.y;
-        targetName = interTarget.name;
+      if (curCh.number === 1) {
+        const ablass = this.targets.find((t) => t.id === 'relic_ablasskasten_tetzel');
+        if (ablass) { targetX = ablass.x; targetY = ablass.y; targetName = ablass.name; }
+      } else if (curCh.number === 2) {
+        const nd = this.targets.find((t) => t.id === 'node_node_lettern');
+        if (nd) { targetX = nd.x; targetY = nd.y; targetName = nd.name; }
+      } else if (curCh.number === 5) {
+        const nd = this.targets.find((t) => t.id === 'node_node_holz');
+        if (nd) { targetX = nd.x; targetY = nd.y; targetName = nd.name; }
+      } else if (curCh.number === 6) {
+        const nd = this.targets.find((t) => t.id === 'node_node_kraeuter');
+        if (nd) { targetX = nd.x; targetY = nd.y; targetName = nd.name; }
+      } else if (curCh.targetInterior) {
+        const door = this.targets.find((t) => t.kind === 'door' && t.interiorId === curCh.targetInterior);
+        if (door) { targetX = door.x; targetY = door.y; targetName = door.name; }
       }
     } else if (!objectives[2] && curCh.stationId) {
-      // Stufe 2: Didaktische Station
       const st = this.targets.find((t) => t.stationId === curCh.stationId);
-      if (st) {
-        targetX = st.x;
-        targetY = st.y;
-        targetName = st.name;
-      }
+      if (st) { targetX = st.x; targetY = st.y; targetName = st.name; }
+    } else if (!objectives[2] && curCh.targetInterior) {
+      const door = this.targets.find((t) => t.kind === 'door' && t.interiorId === curCh.targetInterior);
+      if (door) { targetX = door.x; targetY = door.y; targetName = door.name; }
     } else if (!objectives[3] && curCh.relicId) {
-      // Stufe 3: Primärquelle / Relikt
       const r = this.targets.find((t) => t.relic?.id === curCh.relicId);
-      if (r) {
-        targetX = r.x;
-        targetY = r.y;
-        targetName = r.name;
-      }
-    } else if (objectives.every(Boolean)) {
-      gameState.compassText = '🎉 Kapitel-Aufgaben gelöst! Nächstes Kapitel bereit.';
+      if (r) { targetX = r.x; targetY = r.y; targetName = r.name; }
+    } else if (!objectives[3]) {
+      targetX = curCh.mentor.x;
+      targetY = curCh.mentor.y;
+      targetName = `${curCh.mentor.name} (Disputation)`;
+    } else {
+      gameState.compassText = `🧭 Kapitel ${curCh.number} gemeistert!`;
       const el = document.getElementById('hud-compass');
-      if (el) el.innerHTML = `<strong>🧭 Status:</strong> <span style="color:#34d399;">Kapitel ${curCh.number} vollständig gemeistert!</span>`;
+      if (el) el.innerHTML = `🧭 <strong style="color:#15803d;">Kapitel ${curCh.number} abgeschlossen!</strong>`;
       return;
-    }
-
-    // Smart Cross-Submap Door Routing:
-    if (!this.currentRoom && targetX >= 96 * 16) {
-      // Player is outdoors, but target is inside an interior room
-      const targetRoom = ROOMS.find(
-        (r) => targetX >= r.x && targetX <= r.x + r.w && targetY >= r.y && targetY <= r.y + r.h
-      );
-      if (targetRoom) {
-        targetX = targetRoom.outdoorDoor.x;
-        targetY = targetRoom.outdoorDoor.y;
-        targetName = `Eingang: ${targetRoom.name}`;
-      }
-    } else if (this.currentRoom && targetX < 96 * 16) {
-      // Player is indoors, but target is outdoors
-      targetX = this.currentRoom.exit.x;
-      targetY = this.currentRoom.exit.y;
-      targetName = 'Ausgang nach draußen';
-    } else if (this.currentRoom && targetX >= 96 * 16) {
-      // Target is indoors - check if in different room
-      const targetRoom = ROOMS.find(
-        (r) => targetX >= r.x && targetX <= r.x + r.w && targetY >= r.y && targetY <= r.y + r.h
-      );
-      if (targetRoom && targetRoom.id !== this.currentRoom.id) {
-        targetX = this.currentRoom.exit.x;
-        targetY = this.currentRoom.exit.y;
-        targetName = 'Ausgang nach draußen';
-      }
     }
 
     const dx = targetX - this.player.x;
     const dy = targetY - this.player.y;
     const distPx = Math.hypot(dx, dy);
-    const meters = Math.max(2, Math.round(distPx / 8));
+    const meters = Math.max(1, Math.round(distPx / 8));
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
     let dirStr = '→ Osten';
@@ -1248,69 +1366,25 @@ export class WorldScene extends Phaser.Scene {
     else if (angle >= -157.5 && angle < -112.5) dirStr = '↖ Nordwesten';
     else dirStr = '← Westen';
 
-    let compassMsg = '';
-    if (distPx <= 36) {
-      compassMsg = `📍 Ziel direkt vor dir: <strong>${targetName}</strong> <span style="color:#fbbf24;">(Drücke [E])</span>`;
-    } else {
-      compassMsg = `🧭 <strong>${targetName}:</strong> <span style="color:#ffd86b;">${dirStr}</span> (${meters} m)`;
-    }
+    const compassMsg =
+      distPx <= 38
+        ? `📍 Direkt vor dir: <strong>${targetName}</strong> <span class="compass-key">[E]</span>`
+        : `🧭 <strong>${targetName}:</strong> ${dirStr} (${meters} m)`;
 
     gameState.compassText = compassMsg;
     const el = document.getElementById('hud-compass');
-    if (el) {
-      el.innerHTML = compassMsg;
-    }
-  }
-
-  public warpTo(target: { x: number; y: number; isIndoor: boolean; name: string; roomId?: string }): void {
-    sound.door();
-    const cam = this.cameras.main;
-    cam.fadeOut(160, 0, 0, 0);
-
-    cam.once('camerafadeoutcomplete', () => {
-      this.player.x = target.x;
-      this.player.y = target.y;
-      this.player.setDepth(this.player.y);
-      gameState.playerX = target.x;
-      gameState.playerY = target.y;
-
-      if (target.isIndoor) {
-        const room =
-          ROOMS.find((r) => r.id === target.roomId) ||
-          ROOMS.find(
-            (r) => target.x >= r.x && target.x <= r.x + r.w && target.y >= r.y && target.y <= r.y + r.h
-          );
-        if (room) {
-          this.currentRoom = room;
-          cam.stopFollow();
-          const fitZoom = Math.max(cam.width / room.w, cam.height / room.h);
-          cam.setZoom(fitZoom);
-          cam.centerOn(room.x + room.w / 2, room.y + room.h / 2);
-          cam.setBounds(room.x, room.y, room.w, room.h);
-        }
-      } else {
-        this.currentRoom = null;
-        cam.setBounds(0, 0, 96 * 16, 88 * 16);
-        cam.setZoom(1.0);
-        cam.startFollow(this.player, true, 0.1, 0.1);
-      }
-
-      sound.setIndoorAcoustics(target.isIndoor);
-      cam.fadeIn(180, 0, 0, 0);
-
-      const uiScene = this.scene.get('UIScene') as any;
-      if (uiScene) {
-        uiScene.showToast(`🚪 ${target.name}`);
-      }
-    });
-  }
-
-  public buildPlateauCliffs(): void {
-    // Nature cliffs and paths are rendered cleanly in the terrain texture
+    if (el) el.innerHTML = compassMsg;
   }
 
   public enterInterior(roomId: string = 'lutherstube_wittenberg'): void {
     sound.door();
+    if (this.player?.body) {
+      (this.player.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+    }
+    this.input.keyboard?.resetKeys();
+    this.ambientSpeechManager?.dismissBubble(true);
+    if (this.labelDiv) this.labelDiv.style.display = 'none';
+    if (this.nameplatesLayer) this.nameplatesLayer.style.display = 'none';
     this.scene.pause('WorldScene');
     this.scene.launch('InteriorScene', {
       roomId,

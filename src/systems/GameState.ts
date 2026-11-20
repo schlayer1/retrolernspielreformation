@@ -51,11 +51,12 @@ export class GameState {
   public discoveredRelics = new Set<string>();
   public lexiconRead = new Set<string>();
   public unlockedLexicon = new Set<string>();
-  public playerX = 22 * 16;
-  public playerY = 24 * 16;
+  public playerX = 23 * 16;
+  public playerY = 25 * 16;
   public questCompleted = false;
   public gender: ReformationPlayerGender = 'male';
   public role: ReformationPlayerRole = 'drucker';
+  public roleBonusApplied = false;
   public playerName = 'Lucas';
   public malePreviewUrl = '';
   public femalePreviewUrl = '';
@@ -157,9 +158,33 @@ export class GameState {
           this.maxUnlockedChapter = Math.max(this.maxUnlockedChapter, ch + 1);
         }
       }
-      this.checkLexiconUnlocks();
+      const newlyUnlocked = this.checkLexiconUnlocks();
+      if (newlyUnlocked.length > 0 && typeof window !== 'undefined' && (window as any).__showToast) {
+        (window as any).__showToast(`📖 Neues Lexikonwissen: ${newlyUnlocked[0]}`);
+      }
       this.notify();
     }
+  }
+
+  public applyRoleBonus(): void {
+    if (this.roleBonusApplied) return;
+    if (this.role === 'drucker') {
+      this.inventory.bleilettern = (this.inventory.bleilettern ?? 0) + 2;
+      this.inventory.druckerschwaerze = (this.inventory.druckerschwaerze ?? 0) + 2;
+      this.inventory.papierbogen = (this.inventory.papierbogen ?? 0) + 2;
+    } else if (this.role === 'kurier') {
+      this.inventory.brot_fladen = (this.inventory.brot_fladen ?? 0) + 2;
+      this.inventory.apfel = (this.inventory.apfel ?? 0) + 2;
+      this.inventory.pergament = (this.inventory.pergament ?? 0) + 1;
+      this.courage = Math.min(100, this.courage + 8);
+    } else if (this.role === 'chronist') {
+      this.inventory.pergament = (this.inventory.pergament ?? 0) + 2;
+      this.inventory.tinte_feder = (this.inventory.tinte_feder ?? 0) + 2;
+      this.inventory.flugschrift = (this.inventory.flugschrift ?? 0) + 1;
+      this.knowledge = Math.min(100, this.knowledge + 8);
+    }
+    this.roleBonusApplied = true;
+    this.notify();
   }
 
   public setChapter(ch: number): void {
@@ -210,16 +235,21 @@ export class GameState {
   }
 
   public eat(): string {
-    const foodItems: ReformationItemId[] = ['brot_fladen'] as any;
-    for (const item of foodItems) {
-      if ((this.inventory[item] || 0) > 0) {
-        this.removeItem(item, 1);
-        this.piety = Math.min(100, this.piety + 10);
+    const foodItems: { id: ReformationItemId; boost: number; icon: string }[] = [
+      { id: 'brot_fladen', boost: 10, icon: '🍞' },
+      { id: 'apfel', boost: 8, icon: '🍎' },
+      { id: 'bier_krug', boost: 12, icon: '🍺' },
+    ];
+    for (const f of foodItems) {
+      if ((this.inventory[f.id] || 0) > 0) {
+        this.removeItem(f.id, 1);
+        this.piety = Math.min(100, this.piety + f.boost);
+        this.courage = Math.min(100, this.courage + 5);
         this.notify();
-        return `🍞 Du stärkst dich mit ${REFORMATION_ITEMS[item]?.name || item}! (+10 Frömmigkeit & Kraft)`;
+        return `${f.icon} Du stärkst dich mit ${REFORMATION_ITEMS[f.id]?.name || f.id}! (+${f.boost} Frömmigkeit & +5 Mut)`;
       }
     }
-    return '🍞 Kein Proviant im Beutel! Besorge dir Brote auf dem Wittenberger Markt.';
+    return '🍞 Kein Proviant im Beutel! Besorge Brote, Äpfel oder Klosterbier.';
   }
 
   public discoverRelic(id: string): void {
@@ -264,11 +294,16 @@ export class GameState {
   }
 
   public generateHefterCode(): string {
-    const base = this.playerName.substring(0, 3).toUpperCase();
-    const hash = Math.abs(
-      (this.getEpochenPunkte() * 37 + this.discoveredRelics.size * 101) % 9000
-    ) + 1000;
-    return `REF-${base}-${hash}`;
+    const clean = (this.playerName || 'LUC')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .padEnd(3, 'X')
+      .substring(0, 3);
+    const chTag = `K0${this.chapter}`;
+    const cc = String(this.completedChapters.size).padStart(2, '0');
+    const rr = String(this.discoveredRelics.size).padStart(2, '0');
+    const chk = ((this.chapter * 17 + this.completedChapters.size * 31 + this.discoveredRelics.size * 47 + this.knowledge) % 90) + 10;
+    return `REF-${chTag}-${clean}-${cc}${rr}-${chk}`;
   }
 
   public checkQuest(ch?: number): boolean {
@@ -279,15 +314,42 @@ export class GameState {
   }
 
   public selectStartChapter(chId: number): void {
-    this.chapter = Math.max(1, Math.min(8, chId));
+    const ch = Math.max(1, Math.min(8, Math.round(chId) || 1));
+    this.chapter = ch;
+    this.maxUnlockedChapter = Math.max(this.maxUnlockedChapter, ch);
+    const data = this.getChapterData(ch);
+    this.playerX = data.spawn.x;
+    this.playerY = data.spawn.y;
+    this.checkLexiconUnlocks();
     this.notify();
   }
 
   public loadFromHefterCode(code: string): boolean {
-    if (!code || !code.startsWith('REF-')) return false;
-    const parts = code.trim().split('-');
+    if (!code) return false;
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed.startsWith('REF-')) return false;
+    const parts = trimmed.split('-');
     if (parts.length < 3) return false;
-    this.playerName = parts[1] || 'Lucas';
+
+    if (parts[1].startsWith('K') && parts.length >= 4) {
+      const parsedCh = parseInt(parts[1].slice(1), 10);
+      const ch = Number.isFinite(parsedCh) ? Math.max(1, Math.min(8, parsedCh)) : 1;
+      const namePart = parts[2] || 'LUC';
+      this.playerName = namePart.charAt(0) + namePart.slice(1).toLowerCase();
+      this.chapter = ch;
+      this.maxUnlockedChapter = Math.max(this.maxUnlockedChapter, ch);
+      for (let i = 1; i < ch; i++) {
+        this.completedChapters.add(i);
+        this.chapterObjectives[i] = [true, true, true, true];
+      }
+      const sp = this.getChapterData(ch).spawn;
+      this.playerX = sp.x;
+      this.playerY = sp.y;
+    } else {
+      const legacyName = parts[1] || 'Lucas';
+      this.playerName = legacyName.charAt(0) + legacyName.slice(1).toLowerCase();
+    }
+    this.checkLexiconUnlocks();
     this.notify();
     return true;
   }
@@ -304,6 +366,8 @@ export class GameState {
       quizPerfect: Array.from(this.quizPerfect),
       gender: this.gender,
       role: this.role,
+      roleBonusApplied: this.roleBonusApplied,
+      chapterObjectives: this.chapterObjectives,
       discoveredRelics: Array.from(this.discoveredRelics),
       lexiconRead: Array.from(this.lexiconRead),
       unlockedLexicon: Array.from(this.unlockedLexicon),
@@ -326,11 +390,17 @@ export class GameState {
     this.completedChapters = new Set(data.completedChapters || []);
     this.inventory = data.inventory || {};
     this.craftedOnce = new Set(data.craftedOnce || []);
-    this.playerX = data.playerX || 22 * 16;
-    this.playerY = data.playerY || 24 * 16;
+    this.playerX = data.playerX || 23 * 16;
+    this.playerY = data.playerY || 25 * 16;
     this.quizPerfect = new Set(data.quizPerfect || []);
     this.gender = data.gender || 'male';
     this.role = data.role || 'drucker';
+    this.roleBonusApplied = Boolean(data.roleBonusApplied);
+    if (data.chapterObjectives) {
+      for (const [k, v] of Object.entries(data.chapterObjectives)) {
+        this.chapterObjectives[Number(k)] = v;
+      }
+    }
     this.discoveredRelics = new Set(data.discoveredRelics || []);
     this.lexiconRead = new Set(data.lexiconRead || []);
     this.unlockedLexicon = new Set(data.unlockedLexicon || []);

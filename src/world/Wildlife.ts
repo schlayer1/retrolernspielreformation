@@ -24,6 +24,7 @@ interface AnimalEntity {
 interface AmbientDuck {
   sprite: Phaser.GameObjects.Sprite;
   baseX: number;
+  offsetX: number;
   baseY: number;
   driftRangeY: number;
   speed: number;
@@ -67,51 +68,62 @@ export class WildlifeManager {
     this.scene = scene;
   }
 
+  private riverCenterTileX(ty: number): number {
+    return 50 + Math.sin(ty * 0.08) * 3.5;
+  }
+
   public init(): void {
-    // 1. Marktplatz Wittenberg: Stadttauben & Haustiere direkt am Startort (x: 16..42, y: 20..26)
+    // 1. Marktplatz Wittenberg: Stadttauben & Hofkatze (kein doppelter Hund — Tölpel ist Begleiter!)
     this.spawnPigeon(25 * 16, 25 * 16, false);
     this.spawnPigeon(28 * 16, 23 * 16, false);
     this.spawnPigeon(24 * 16, 23 * 16, true);
-    this.spawnAnimal(17 * 16, 24 * 16, 'farm_dog_idle', 14, 16, 0.9, 'dog');
     this.spawnAnimal(34 * 16, 23 * 16, 'farm_cat_idle', 12, 14, 0.9, 'cat');
 
-    // 2. Hofhühner bei Cranachs Hofatelier (x: 38..44, y: 22..25)
-    this.spawnAnimal(38 * 16, 23 * 16, 'farm_chicken_idle', 10, 18, 0.9, 'chicken');
-    this.spawnAnimal(42 * 16, 22 * 16, 'farm_chicken_idle', 10, 18, 0.9, 'chicken');
+    // 2. Hofhühner bei Cranachs Hofatelier (x: 38..43, y: 22..25)
+    this.spawnAnimal(39 * 16, 23 * 16, 'farm_chicken_idle', 10, 18, 0.9, 'chicken');
+    this.spawnAnimal(42 * 16, 23 * 16, 'farm_chicken_idle', 10, 18, 0.9, 'chicken');
 
-    // 3. Kurfürstliche Schlosskoppel (Weide östlich des Marktes: x: 30..48, y: 28..34)
-    this.spawnAnimal(32 * 16, 29 * 16, 'farm_horse_idle', 22, 15, 1.0, 'horse');
-    this.spawnAnimal(44 * 16, 30 * 16, 'farm_horse_idle', 22, 15, 1.0, 'horse');
+    // 3. Kurfürstliche Reiterkoppel auf freier Weide östlich der Elbe (x: 65..72, y: 38..44)
+    this.spawnAnimal(65 * 16, 40 * 16, 'farm_horse_idle', 22, 15, 0.95, 'horse');
+    this.spawnAnimal(70 * 16, 42 * 16, 'farm_horse_idle', 22, 15, 0.95, 'horse');
 
-    // 4. Katharinas Klostergarten & Augustiner-Weide (x: 28..42, y: 54..64)
-    this.spawnAnimal(34 * 16, 56 * 16, 'farm_cow_idle', 18, 14, 0.95, 'cow');
-    this.spawnAnimal(40 * 16, 60 * 16, 'farm_cow_idle', 16, 14, 0.85, 'cow');
-    this.spawnAnimal(36 * 16, 62 * 16, 'farm_pig_idle', 14, 15, 0.9, 'pig');
+    // 4. Katharinas Klostergarten & Augustiner-Weide (x: 30..42, y: 54..60)
+    this.spawnAnimal(33 * 16, 56 * 16, 'farm_cow_idle', 16, 14, 0.9, 'cow');
+    this.spawnAnimal(40 * 16, 58 * 16, 'farm_cow_idle', 16, 14, 0.85, 'cow');
+    this.spawnAnimal(37 * 16, 59 * 16, 'farm_pig_idle', 12, 15, 0.9, 'pig');
 
-    // 5. Wollige Bergschafe an den Hängen der Wartburg (x: 14..26, y: 78..86)
-    this.spawnAnimal(16 * 16, 80 * 16, 'farm_sheep_idle', 18, 14, 0.9, 'sheep');
-    this.spawnAnimal(24 * 16, 82 * 16, 'farm_sheep_idle', 16, 14, 0.8, 'sheep');
+    // 5. Wollige Bergschafe an den Hängen der Wartburg (x: 13..28, y: 78..83)
+    this.spawnAnimal(15 * 16, 80 * 16, 'farm_sheep_idle', 16, 14, 0.9, 'sheep');
+    this.spawnAnimal(26 * 16, 82 * 16, 'farm_sheep_idle', 16, 14, 0.85, 'sheep');
 
-    // 6. Bauernkate Frankenhausen (x: 54..66, y: 72..80)
+    // 6. Bauernkate Frankenhausen (x: 56..66, y: 75..80)
     this.spawnAnimal(58 * 16, 76 * 16, 'farm_chicken_idle', 12, 18, 0.9, 'chicken');
-    this.spawnAnimal(62 * 16, 74 * 16, 'farm_chicken_idle', 12, 18, 0.9, 'chicken');
+    this.spawnAnimal(63 * 16, 75 * 16, 'farm_chicken_idle', 12, 18, 0.9, 'chicken');
 
-    // 7. Schwimmende Wildenten auf der Elbe / Mulde
-    this.spawnDuck(49 * 16, 20 * 16, 40, 10);
-    this.spawnDuck(51 * 16, 36 * 16, 48, 12);
-    this.spawnDuck(48 * 16, 52 * 16, 50, 11);
-    this.spawnDuck(50 * 16, 68 * 16, 44, 9);
+    // 7. Schwimmende Wildenten exakt auf der gekrümmten Elbe (fern von Brücken 22..25 & 56..59)
+    for (const [ty, drift] of [
+      [16, 28],
+      [34, 42],
+      [48, 36],
+      [70, 38],
+    ]) {
+      this.spawnDuck(this.riverCenterTileX(ty) * 16, ty * 16, drift, 10);
+    }
 
-    // 8. Uferfrösche an den feuchten Schilfkanten
-    this.spawnFrog(46 * 16, 30 * 16);
-    this.spawnFrog(54 * 16, 48 * 16);
-    this.spawnFrog(46 * 16, 66 * 16);
+    // 8. Uferfrösche exakt an den Flussufern (riverCenter +/- 3.3 Tiles)
+    for (const [ty, side] of [
+      [30, -3.3],
+      [46, 3.3],
+      [66, -3.3],
+    ]) {
+      this.spawnFrog((this.riverCenterTileX(ty) + side) * 16, ty * 16);
+    }
 
     // 9. Zierliche Schmetterlinge über blühenden Wiesen
-    this.spawnButterfly(23 * 16, 20 * 16, 20, 14, 'blue');
-    this.spawnButterfly(44 * 16, 50 * 16, 28, 18, 'yellow');
-    this.spawnButterfly(24 * 16, 78 * 16, 30, 20, 'blue');
-    this.spawnButterfly(60 * 16, 64 * 16, 26, 16, 'yellow');
+    this.spawnButterfly(23 * 16, 21 * 16, 20, 14, 'blue');
+    this.spawnButterfly(43 * 16, 50 * 16, 24, 16, 'yellow');
+    this.spawnButterfly(24 * 16, 79 * 16, 26, 18, 'blue');
+    this.spawnButterfly(61 * 16, 65 * 16, 24, 15, 'yellow');
   }
 
   private spawnPigeon(x: number, y: number, isWhite: boolean): void {
@@ -196,6 +208,7 @@ export class WildlifeManager {
     this.ducks.push({
       sprite,
       baseX: x,
+      offsetX: Phaser.Math.Between(-8, 8),
       baseY: y,
       driftRangeY,
       speed,
@@ -258,7 +271,7 @@ export class WildlifeManager {
     });
   }
 
-  public update(delta: number, playerX: number, playerY: number): void {
+  public update(delta: number, playerX: number, playerY: number, isBlocked?: (x: number, y: number) => boolean): void {
     // 1. Roaming Herds & Farm Animals
     for (const ent of this.animals) {
       ent.stateTimer -= delta;
@@ -318,9 +331,20 @@ export class WildlifeManager {
 
         if (distToTarget > 4) {
           const angle = Phaser.Math.Angle.Between(ent.sprite.x, ent.sprite.y, ent.targetX, ent.targetY);
-          ent.sprite.x += Math.cos(angle) * step;
-          ent.sprite.y += Math.sin(angle) * step;
-          ent.sprite.setDepth(ent.sprite.y);
+          const nx = ent.sprite.x + Math.cos(angle) * step;
+          const ny = ent.sprite.y + Math.sin(angle) * step;
+          if (isBlocked && isBlocked(nx, ny)) {
+            ent.state = 'idle_breathe';
+            ent.stateTimer = 1400;
+            this.startBreatheTween(ent);
+            if (ent.idleAnim && this.scene.anims.exists(ent.idleAnim)) {
+              ent.sprite.play(ent.idleAnim, true);
+            }
+          } else {
+            ent.sprite.x = nx;
+            ent.sprite.y = ny;
+            ent.sprite.setDepth(ent.sprite.y);
+          }
         } else {
           ent.state = 'idle_breathe';
           ent.stateTimer = 2000;
@@ -332,13 +356,14 @@ export class WildlifeManager {
       }
     }
 
-    // 2. Ambient Ducks Floating on the River
+    // 2. Ambient Ducks Floating strictly along the curved Elbe channel
     for (const duck of this.ducks) {
       duck.sprite.y += duck.dirY * (duck.speed * delta) / 1000;
       if (Math.abs(duck.sprite.y - duck.baseY) > duck.driftRangeY) {
         duck.dirY *= -1;
       }
-      duck.sprite.setDepth(duck.sprite.y);
+      duck.sprite.x = this.riverCenterTileX(duck.sprite.y / 16) * 16 + duck.offsetX;
+      duck.sprite.setDepth(5);
     }
 
     // 3. Bank Frogs Reacting to Player

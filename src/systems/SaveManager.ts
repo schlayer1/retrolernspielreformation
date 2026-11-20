@@ -25,6 +25,8 @@ export interface ReformationSaveData {
   knowledge?: number;
   courage?: number;
   piety?: number;
+  chapterObjectives?: Record<number, boolean[]>;
+  roleBonusApplied?: boolean;
 }
 
 const STORAGE_KEY = 'retro_save_reformation_1517';
